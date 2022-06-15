@@ -155,7 +155,7 @@ def train_station_menu(update, transport, line, letter):
 def train_time(update, transport, line, letter, index):
     kb = []
     stop_id, stop = ut.transport_info(transport, index)
-    msg = [f"Tiempos en Estación {stop}\n\n"]
+    msg = [f"Tiempos en estación {stop}\n\n"]
     if transport == 'metro':
         ut.text_metro(stop_id, msg)
     else:
@@ -211,7 +211,12 @@ def bus_menu(update, transport):
 def bus_time(update, transport, index):
     kb = []
     stop_id, stop = ut.transport_info(transport, index)
-    msg = [f"Tiempos en Parada {stop}\n\n"]
+    if transport == 'emt':
+        msg = [f"Tiempos en parada {stop} ("
+               f"{stop_id.replace('EMT_', '')})\n\n"]
+    else:
+        msg = [f"Tiempos en parada {stop} ("
+               f"{stop_id.replace('CRTM_8_', '')})\n\n"]
     ut.text_bus(transport, stop_id, msg)
     _answer(update)
     add_upd_button(kb, f'time_bus_{transport}_{index}')
@@ -227,12 +232,18 @@ def bus_time(update, transport, index):
 def cli_time(update, transport, index):
     kb = []
     stop_id, stop = ut.transport_info(transport, index)
-    msg = [f"Tiempos en {stop}\n\n"]
+    msg = [f"Tiempos en estación {stop}\n\n"]
     if transport == 'metro':
         ut.text_metro(stop_id, msg)
     elif transport == 'cerc':
         ut.text_cercanias(stop_id, msg)
     else:
+        if transport == 'emt':
+            msg = [f"Tiempos en parada {stop} ("
+                   f"{stop_id.replace('EMT_', '')})\n\n"]
+        else:
+            msg = [f"Tiempos en parada {stop} ("
+                   f"{stop_id.replace('CRTM_8_', '')})\n\n"]
         ut.text_bus(transport, stop_id, msg)
     _answer(update)
     add_upd_button(kb, f'time_cli_{transport}_{index}')
@@ -293,12 +304,18 @@ def del_favorite(update, uid, transport, index):
 def time_favorite_menu(update, transport, index):
     kb = []
     stop_id, stop = ut.transport_info(transport, index)
-    msg = [f"Tiempos en {stop}\n\n"]
+    msg = [f"Tiempos en estación {stop}\n\n"]
     if transport == 'metro':
         ut.text_metro(stop_id, msg)
     elif transport == 'cerc':
         ut.text_cercanias(stop_id, msg)
     else:
+        if transport == 'emt':
+            msg = [f"Tiempos en parada {stop} ("
+                   f"{stop_id.replace('EMT_', '')})\n\n"]
+        else:
+            msg = [f"Tiempos en parada {stop} ("
+                   f"{stop_id.replace('CRTM_8_', '')})\n\n"]
         ut.text_bus(transport, stop_id, msg)
     _answer(update)
     add_upd_button(kb, f'time_fav_{transport}_{index}')
