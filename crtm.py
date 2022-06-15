@@ -51,15 +51,18 @@ def button_handler(update, context):
             gui.cli_time(update, args[-2], args[-1])
         elif query.data == 'favorites_menu':
             gui.favorites_menu(update)
-        elif query.data.startswith('fav_'):
+        elif query.data.startswith('fav'):
             args = query.data.split('_')
             gui.add_favorite(update, args[-3], args[-2], args[-1])
-        elif query.data.startswith('unfav_'):
+        elif query.data.startswith('unfav'):
             args = query.data.split('_')
             gui.del_favorite(update, args[-3], args[-2], args[-1])
-        elif query.data.startswith('time_fav_'):
+        elif query.data.startswith('time_fav'):
             args = query.data.split('_')
             gui.time_favorite_menu(update, args[-2], args[-1])
+        elif query.data.startswith('rename_fav'):
+            args = query.data.split('_')
+            gui.rename_favorite(update, args[-2], args[-1])
         elif query.data == 'nop':
             query.answer()
 
@@ -72,6 +75,14 @@ def setup_handlers(dispatch, job_queue):
     menu_handler = CommandHandler('menu', cli.menu,
                                   filters=~Filters.update.edited_message)
     dispatch.add_handler(menu_handler)
+
+    weather_handler = CommandHandler('tiempo', cli.weather,
+                                     filters=~Filters.update.edited_message)
+    dispatch.add_handler(weather_handler)
+
+    card_handler = CommandHandler('abono', cli.card,
+                                  filters=~Filters.update.edited_message)
+    dispatch.add_handler(card_handler)
 
     metro_handler = CommandHandler('metro', cli.times,
                                    filters=~Filters.update.edited_message)
@@ -93,9 +104,9 @@ def setup_handlers(dispatch, job_queue):
                                  filters=~Filters.update.edited_message)
     dispatch.add_handler(fav_handler)
 
-    card_handler = CommandHandler('abono', cli.card,
-                                  filters=~Filters.update.edited_message)
-    dispatch.add_handler(card_handler)
+    rename_handler = CommandHandler('renombrar', cli.rename,
+                                    filters=~Filters.update.edited_message)
+    dispatch.add_handler(rename_handler)
 
     help_handler = CommandHandler('ayuda', cli.bot_help,
                                   filters=~Filters.update.edited_message)
@@ -114,7 +125,7 @@ def setup_handlers(dispatch, job_queue):
     dispatch.add_handler(remove_handler)
 
     text_handler = MessageHandler(
-        Filters.text & ~Filters.update.edited_message, cli.suggest_text)
+        Filters.text & ~Filters.update.edited_message, cli.text)
     dispatch.add_handler(text_handler)
 
     dispatch.add_handler(CallbackQueryHandler(button_handler))

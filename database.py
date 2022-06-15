@@ -75,7 +75,7 @@ def favorites(uid):
     with closing(sql.connect(DB)) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
-                'SELECT type, stop '
+                'SELECT type, stop_id, stop '
                 'FROM favorites '
                 'WHERE uid = ?',
                 [uid])
@@ -108,6 +108,17 @@ def add_favorite(uid, transport, stop_id, stop):
                 '(uid, type, stop_id, stop) '
                 'VALUES (?, ?, ?, ?)',
                 [uid, transport, stop_id, stop])
+            db.commit()
+
+
+def rename_favorite(uid, transport, stop_id, stop):
+    with closing(sql.connect(DB)) as db:
+        with closing(db.cursor()) as cur:
+            cur.execute(
+                'UPDATE favorites '
+                'SET stop = ? '
+                'WHERE uid = ? AND type = ? AND stop_id = ?',
+                [stop, uid, transport, stop_id])
             db.commit()
 
 

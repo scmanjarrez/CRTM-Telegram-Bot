@@ -74,10 +74,10 @@ def card_menu(update):
     uid = ut.uid(update)
     msg = CARD
     kb = []
+    _answer(update)
     if db.card(uid) is not None:
         msg = ut.text_card(uid)
-    _answer(update)
-    kb.append(button([("🔃 Actualizar 🔃", 'card_menu')])),
+        kb.append(button([("🔃 Actualizar 🔃", 'card_menu')])),
     kb.append(button([("« Menú", 'main_menu')]))
     resp = ut.send
     if update.callback_query is not None:
@@ -252,8 +252,8 @@ def favorites_menu(update):
     kb = []
     if favorites:
         msg = "Estas son tus paradas/estaciones en favoritos"
-        for transport, stop in favorites:
-            index = ut.index(transport, stop)
+        for transport, stop_id, stop in favorites:
+            index = ut.index(transport, stop_id)
             kb.append(
                 button(
                     [(f"{transport}: {stop}",
@@ -312,3 +312,36 @@ def time_favorite_menu(update, transport, index):
         resp = ut.edit
     resp(update, ''.join(msg),
          reply_markup=InlineKeyboardMarkup(kb))
+
+
+def rename_menu(update):
+    favorites = db.favorites(ut.uid(update))
+    _answer(update)
+    msg = "No tienes estaciones/paradas en guardadas en favoritos"
+    kb = []
+    if favorites:
+        msg = "Indícame la estación/parada que quieras renombrar"
+        for transport, stop_id, stop in favorites:
+            index = ut.index(transport, stop_id)
+            kb.append(
+                button(
+                    [(f"{transport}: {stop}",
+                      f'rename_fav_{transport}_{index}')]))
+    kb.append(button([("« Menú", 'main_menu')]))
+    resp = ut.send
+    if update.callback_query is not None:
+        resp = ut.edit
+    resp(update, msg,
+         reply_markup=InlineKeyboardMarkup(kb))
+
+
+# rename_fav_<transport>_<index>
+def rename_favorite(update, transport, index):
+    uid = ut.uid(update)
+    ut.STATE[uid] = ('rename', (transport, index))
+    resp = ut.send
+    if update.callback_query is not None:
+        resp = ut.edit
+    resp(update,
+         "De acuerdo, indícame el nuevo nombre de la estación/parada",
+         reply_markup=None)

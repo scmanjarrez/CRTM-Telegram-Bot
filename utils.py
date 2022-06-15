@@ -20,6 +20,7 @@ import json
 import re
 
 
+STATE = {}
 KB_WIDTH = 4
 RE = {
     'code': re.compile(r'4__(\d+)___'),
@@ -162,10 +163,10 @@ def load_data():
 
 def train_lines(transport):
     for idx, stop in enumerate(DATA['raw'][transport]):
-        DATA['proc'][transport]['index'][stop['name']] = idx
         idname = 'cloudId'
         if transport == 'cerc':
             idname = 'id'
+        DATA['proc'][transport]['index'][stop[idname]] = idx
         DATA['proc'][transport]['names'].append(stop['name'])
         DATA['proc'][transport]['ids'].append(stop[idname])
 
@@ -185,15 +186,18 @@ def train_lines(transport):
 
 def bus_lines(transport):
     for idx, info in enumerate(DATA['raw'][transport]['station'].items()):
-        DATA['proc'][transport]['index'][info[1]['name']] = idx
+        DATA['proc'][transport]['index'][info[0]] = idx
         DATA['proc'][transport]['names'].append(info[1]['name'])
         DATA['proc'][transport]['ids'].append(info[0])
 
 
 def token():
     if DATA['token'] is None:
-        with open(FILES['token'], 'r') as f:
-            DATA['token'] = f.read()
+        try:
+            with open(FILES['token'], 'r+') as f:
+                DATA['token'] = f.read()
+        except FileNotFoundError:
+            DATA['token'] = 'null'
     post = req.post(f'{end.URL["token"]}{end.END["info"]}',
                     params={'key': config('cloud')},
                     data={'idToken': DATA['token']},
@@ -364,6 +368,8 @@ def bus(transport, stop_id):
     get = req.get(f'{end.URL["cloud"]}{end.END[transport]}',
                   params={'stopId': stop_id, 'type': 3},
                   headers=end.headers())
+    if get.text == 'Rate exceeded.':
+        return None
     data = json.loads(get.text)
     if 'code' in data:
         return None
@@ -424,8 +430,8 @@ def text_card(uid, cardn=None):
                f"<code>{data['first_date']}</code>\n"
                f"- <b>Caducidad</b>: "
                f"<code>{data['last_date']}</code>\n\n"
-               f"<b>Nota</b>: <code>La validez de la carga se extenderá "
-               f"hasta las 5 AM del día siguiente.</code>")
+               f"<b>Nota</b>: La validez de la carga se extenderá "
+               f"hasta las 5 AM del día siguiente.")
     return msg
 
 
@@ -489,8 +495,8 @@ def text_bus(transport, stop_id, msg):
                    "no es posible obtener información en estos momentos.</b>")
 
 
-def index(transport, name):
-    return DATA['proc'][transport]['names'].index(name)
+def index(transport, stop_id):
+    return DATA['proc'][transport]['index'][stop_id]
 
 
 def store_suggestion(text):

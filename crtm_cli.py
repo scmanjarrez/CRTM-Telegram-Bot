@@ -10,15 +10,19 @@ import database as db
 import unicodedata
 import utils as ut
 
-SUGG = []
 
 HELP = (
     "Esto es lo que puedo hacer por ti:"
     "\n\n"
 
-    "❔ /menu - Interactúa con el bot mediante botones. <b>[beta]</b>"
+    "❔ /menu - Interactúa con el bot mediante botones."
     "\n\n"
 
+    "❔ /tiempo - Información sobre el tiempo."
+    "\n"
+    "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
+    "transporte."
+    "\n"
     "❔ /metro <code>&lt;nombre&gt;</code> - Tiempos de la estación "
     "de metro."
     "\n"
@@ -33,8 +37,7 @@ HELP = (
     "\n"
     "❔ /favoritos - Lista de favoritos."
     "\n"
-    "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
-    "transporte."
+    "❔ /renombrar - Renombrar un favorito."
     "\n\n"
 
     "❔ /ayuda - Lista de comandos."
@@ -66,6 +69,28 @@ def menu(update, context):
         ut.not_started(update)
     else:
         gui.main_menu(update)
+
+
+def weather(update, context):
+    uid = ut.uid(update)
+    if not db.cached(uid):
+        ut.not_started(update)
+    else:
+        gui.weather_menu(update)
+
+
+def card(update, context):
+    uid = ut.uid(update)
+    if not db.cached(uid):
+        ut.not_started(update)
+    else:
+        msg = gui.CARD
+        cardn = db.card(uid)
+        if context.args:
+            cardn = context.args[0]
+        if cardn is not None:
+            msg = ut.text_card(uid, cardn)
+        ut.send(update, msg)
 
 
 def _normalize(word):
@@ -142,18 +167,12 @@ def favorites(update, context):
         gui.favorites_menu(update)
 
 
-def card(update, context):
+def rename(update, context):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
     else:
-        msg = gui.CARD
-        cardn = db.card(uid)
-        if context.args:
-            cardn = context.args[0]
-        if cardn is not None:
-            msg = gui.text_card(uid, cardn)
-        ut.send(update, msg)
+        gui.rename_menu(update)
 
 
 def bot_help(update, context):
@@ -179,23 +198,32 @@ def suggest(update, context):
     if not db.cached(uid):
         ut.not_started(update)
     else:
-        if uid not in SUGG:
-            SUGG.append(uid)
+        if uid not in ut.STATE:
+            ut.STATE[uid] = ('suggest',)
         ut.send(update,
                 "Dime qué debería mejorar o añadir, haré lo posible "
                 "por implementarlo.")
 
 
-def suggest_text(update, context):
+def text(update, context):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
     else:
-        if uid in SUGG:
-            ut.store_suggestion(update.message.text)
-            ut.send(update,
-                    "He tomado nota de la sugerencia. Gracias.")
-            SUGG.remove(uid)
+        if uid in ut.STATE:
+            if ut.STATE[uid][0] == 'suggest':
+                ut.store_suggestion(update.message.text)
+                ut.send(update,
+                        "He tomado nota de la sugerencia. Gracias.")
+            else:
+                transport, index = ut.STATE[uid][1]
+                stop_id, stop = ut.transport_info(transport, index)
+                db.rename_favorite(uid, transport, stop_id,
+                                   update.message.text)
+                ut.send(update,
+                        f"El nombre de la estación/parada '{stop}' "
+                        f"ahora será '{update.message.text}'")
+            del ut.STATE[uid]
 
 
 def remove(update, context):
