@@ -136,15 +136,14 @@ if __name__ == '__main__':
         ut.bus_lines('emt')
         ut.bus_lines('urb')
 
-        # updater.start_webhook(listen=ut.config('listen'),
-        #                       port=ut.config('port'),
-        #                       url_path=ut.config('bot'),
-        #                       cert=ut.config('cert'),
-        #                       webhook_url=(f"https://"
-        #                                    f"{ut.config('ip')}/"
-        #                                    f"{ut.config('bot')}")
-        #                       )
-        updater.start_polling()
+        updater.start_webhook(listen=ut.config('listen'),
+                              port=ut.config('port'),
+                              url_path=ut.config('bot'),
+                              cert=ut.config('cert'),
+                              webhook_url=(f"https://"
+                                           f"{ut.config('ip')}/"
+                                           f"{ut.config('bot')}")
+                              )
         updater.idle()
     else:
         print(f"File {ut.FILES['cfg']} not found.")

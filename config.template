@@ -1,0 +1,13 @@
+[webhook]
+bot = bot_token
+ip = public_ip
+listen = local_listen_address
+port = local_bind_port
+cert = certificate_pem
+
+[apikeys]
+cloud = cloud_token
+adif = adif_token
+
+[settings]
+admin = telegram_uid
