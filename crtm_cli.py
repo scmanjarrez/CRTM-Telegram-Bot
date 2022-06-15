@@ -70,7 +70,7 @@ def menu(update, context):
 
 def _normalize(word):
     nfkd = unicodedata.normalize('NFKD', word)
-    return u"".join([c for c in nfkd if not unicodedata.combining(c)])
+    return u"".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
 
 
 def _is_int(text):

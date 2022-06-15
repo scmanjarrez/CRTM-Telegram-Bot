@@ -14,9 +14,9 @@ import utils as ut
 
 CARD = ("Es necesario que me indiques un número.\n\n"
         "<b>Ejemplo</b>:\n- /abono <code>0010000000</code>\n\n"
-        "<b>Nota</b>: <code>&lt;número&gt; se compone por los "
+        "<b>Nota</b>: <code>&lt;número&gt;</code> se compone por los "
         "3 últimos dígitos de la primera fila y los dígitos de la "
-        "segunda fila.</code>")
+        "segunda fila.")
 
 
 def _answer(update, msg=None):

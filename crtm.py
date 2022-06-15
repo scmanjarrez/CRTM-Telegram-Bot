@@ -144,6 +144,7 @@ if __name__ == '__main__':
                                            f"{ut.config('ip')}/"
                                            f"{ut.config('bot')}")
                               )
+        # updater.start_polling()
         updater.idle()
     else:
         print(f"File {ut.FILES['cfg']} not found.")
