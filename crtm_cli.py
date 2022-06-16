@@ -21,7 +21,7 @@ HELP = (
     "❔ /tiempo - Información sobre el tiempo."
     "\n"
     "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
-    "transporte."
+    "transporte. Elimínalo enviando -1."
     "\n"
     "❔ /metro <code>&lt;nombre&gt;</code> - Tiempos de la estación "
     "de metro."
@@ -89,13 +89,17 @@ def card(update, context):
         if context.args:
             cardn = context.args[0]
         if cardn is not None:
-            msg = ut.text_card(uid, cardn)
+            if cardn == '-1':
+                db.del_card(uid)
+                msg = "He eliminado la información sobre tu abono"
+            else:
+                msg = ut.text_card(uid, cardn)
         ut.send(update, msg)
 
 
 def _normalize(word):
     nfkd = unicodedata.normalize('NFKD', word)
-    return u"".join([c for c in nfkd if not unicodedata.combining(c)]).lower()
+    return u''.join([c for c in nfkd if not unicodedata.combining(c)]).lower()
 
 
 def _is_int(text):
