@@ -5,16 +5,19 @@
 # Copyright (c) 2022 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
 
+from telegram import (InlineQueryResultArticle, InputTextMessageContent,
+                      ParseMode)
 from telegram.error import Unauthorized, BadRequest
 from dateutil import parser as ps
-from telegram import ParseMode
 from bs4 import BeautifulSoup
 from pathlib import Path
 
 import configparser as cfg
 import endpoints as end  # not uploaded for privacy reasons
+import crtm_gui as gui
 import requests as req
 import database as db
+import unicodedata
 import traceback
 import json
 import re
@@ -22,6 +25,8 @@ import re
 
 STATE = {}
 KB_WIDTH = 4
+LOGO = ('https://raw.githubusercontent.com/'
+        'scmanjarrez/CRTM-Telegram-Bot/master/logos')
 RE = {
     'code': re.compile(r'4__(\d+)___'),
     'line': re.compile(r'(Línea) (.*):'),
@@ -29,6 +34,16 @@ RE = {
     'dest': re.compile(r'(Destino:) (.*)'),
     'time': re.compile(r'(Tiempo\(s\):) (.*)'),
     'type': re.compile(r'^(\w+):$'),
+}
+CMD_TRANS = {
+    'metro': ('metro', 'estación'),
+    'cercanias': ('cerc', 'estación'),
+    'emt': ('emt', 'parada'),
+    'interurbano': ('urb', 'parada'),
+    'types': {
+        'train': ('metro', 'cerc'),
+        'bus': ('emt', 'urb')
+    }
 }
 FILES = {
     'cfg': '.config',
@@ -150,7 +165,7 @@ def parse_bus_data(data):
 
 
 def load_data():
-    download_bus()
+    # download_bus()
     with open(FILES['cerc'], 'r') as f:
         DATA['raw']['cerc'] = json.load(f)
     with open(FILES['metro'], 'r') as f:
@@ -316,72 +331,89 @@ def _metro_time(ref_time, next_time):
 
 
 def metro(stop_id):
-    post = req.post(f'{end.URL["cloud"]}{end.END["metro"]}',
-                    json={'data': {'stopCode': stop_id}},
-                    headers=end.headers())
-    data = json.loads(post.text)
-    cur = data['result']['referenceTime']
-    info = {}
-    for t in data['result']['times']:
-        line = f"Línea {RE['code'].search(t['codLine']).group(1)}"
-        if line not in info:
-            info[line] = {}
-        if t['direction'] not in info[line]:
-            info[line][t['direction']] = {'name': '', 'times': []}
-        if t['codLine'] == '4__6___':
-            info[line][t['direction']]['name'] = DATA[
-                'idx']['metro'][t['direction']]
-        else:
-            info[line][t['direction']]['name'] = t['destination']
-        info[line][t['direction']]['times'].append(_metro_time(cur, t['time']))
-    return info
+    try:
+        post = req.post(f'{end.URL["cloud"]}{end.END["metro"]}',
+                        json={'data': {'stopCode': stop_id}},
+                        headers=end.headers(),
+                        timeout=15)
+    except req.exceptions.ReadTimeout:
+        return None
+    else:
+        data = json.loads(post.text)
+        cur = data['result']['referenceTime']
+        info = {}
+        for t in data['result']['times']:
+            line = f"Línea {RE['code'].search(t['codLine']).group(1)}"
+            if line not in info:
+                info[line] = {}
+            if t['direction'] not in info[line]:
+                info[line][t['direction']] = {'name': '', 'times': []}
+            if t['codLine'] == '4__6___':
+                info[line][t['direction']]['name'] = DATA[
+                    'idx']['metro'][t['direction']]
+            else:
+                info[line][t['direction']]['name'] = t['destination']
+            info[line][t['direction']]['times'].append(
+                _metro_time(cur, t['time']))
+        return info
 
 
 def cercanias(stop_id):
-    get = req.get(end.URL['adif'],
-                  params={'station': stop_id,
-                          'dest': '',
-                          'date': '',
-                          'previous': 1,
-                          'showCercanias': 'true',
-                          'showOtros': 'false'},
-                  headers=end.headers('adif'))
-    soup = BeautifulSoup(get.text, 'html.parser')
-    data = [[[el.text.strip() for el in row.select('td')]
-             for row in plan.select('tr.recent-even, tr.recent-odd')]
-            for plan in soup.select('table#plan-table')]
-    info = {}
-    for idy, times in enumerate(data):
-        if times:
-            if DATA['idx']['cerc'][idy] not in info:
-                info[DATA['idx']['cerc'][idy]] = {}
-            for tm in times:
-                if tm[1] not in info[DATA['idx']['cerc'][idy]]:
-                    info[DATA['idx']['cerc'][idy]][tm[1]] = []
-                info[DATA['idx']['cerc'][idy]][tm[1]].append(
-                    (tm[0] if tm[0] else 'Llegando',
-                     f"T.{tm[4]}" if tm[4] else '?'))
-    return info
+    try:
+        get = req.get(end.URL['adif'],
+                      params={'station': stop_id,
+                              'dest': '',
+                              'date': '',
+                              'previous': 1,
+                              'showCercanias': 'true',
+                              'showOtros': 'false'},
+                      headers=end.headers('adif'),
+                      timeout=15)
+    except req.exceptions.ReadTimeout:
+        return None
+    else:
+        soup = BeautifulSoup(get.text, 'html.parser')
+        data = [[[el.text.strip() for el in row.select('td')]
+                 for row in plan.select('tr.recent-even, tr.recent-odd')]
+                for plan in soup.select('table#plan-table')]
+        info = {}
+        for idy, times in enumerate(data):
+            if times:
+                if DATA['idx']['cerc'][idy] not in info:
+                    info[DATA['idx']['cerc'][idy]] = {}
+                for tm in times:
+                    if tm[1] not in info[DATA['idx']['cerc'][idy]]:
+                        info[DATA['idx']['cerc'][idy]][tm[1]] = []
+                    info[DATA['idx']['cerc'][idy]][tm[1]].append(
+                        (tm[0] if tm[0] else 'Llegando',
+                         f"T.{tm[4]}" if tm[4] else '?'))
+        return info
 
 
 def bus(transport, stop_id):
-    get = req.get(f'{end.URL["cloud"]}{end.END[transport]}',
-                  params={'stopId': stop_id, 'type': 3},
-                  headers=end.headers())
-    if get.text == 'Rate exceeded.':
+    try:
+        get = req.get(f'{end.URL["cloud"]}{end.END[transport]}',
+                      params={'stopId': stop_id, 'type': 3},
+                      headers=end.headers(),
+                      timeout=15)
+    except req.exceptions.ReadTimeout:
         return None
-    data = json.loads(get.text)
-    if 'code' in data:
-        return None
-    info = {}
-    for bs in data['rtl']:
-        sec = [str(binfo['s'] // 60) if binfo['s'] > 60 else 'Llegando'
-               for binfo in bs['l']]
-        bid = DATA['raw'][transport]['bus'][bs['r']]['id']
-        info[bid] = {}
-        info[bid]['name'] = bs['h']
-        info[bid]['times'] = sec
-    return info
+    else:
+        if get.text in ('Rate exceeded.',
+                        'Error: could not handle the request\n'):
+            return None
+        data = json.loads(get.text)
+        if 'code' in data:
+            return None
+        info = {}
+        for bs in data['rtl']:
+            sec = [str(binfo['s'] // 60) if binfo['s'] > 60 else 'Llegando'
+                   for binfo in bs['l']]
+            bid = DATA['raw'][transport]['bus'][bs['r']]['id']
+            info[bid] = {}
+            info[bid]['name'] = bs['h']
+            info[bid]['times'] = sec
+        return info
 
 
 def transport_info(transport, index):
@@ -435,7 +467,8 @@ def text_card(uid, cardn=None):
     return msg
 
 
-def text_metro(stop_id, msg):
+def text_metro(stop, stop_id):
+    msg = [f"Tiempos en estación {stop}\n\n"]
     data = metro(stop_id)
     if data:
         for dline in data:
@@ -452,9 +485,11 @@ def text_metro(stop_id, msg):
                     f"\n\n")
     else:
         msg.append("<b>No hay tiempos disponibles.</b>")
+    return msg
 
 
-def text_cercanias(stop_id, msg):
+def text_cercanias(stop, stop_id):
+    msg = [f"Tiempos en estación {stop}\n\n"]
     data = cercanias(stop_id)
     if data:
         for dtype in data:
@@ -471,9 +506,14 @@ def text_cercanias(stop_id, msg):
                     f"\n\n")
     else:
         msg.append("<b>No hay tiempos disponibles.</b>")
+    return msg
 
 
-def text_bus(transport, stop_id, msg):
+def text_bus(transport, stop, stop_id):
+    prefix = 'EMT_'
+    if transport == 'urb':
+        prefix = 'CRTM_8_'
+    msg = [f"Tiempos en parada {stop} ({stop_id.replace(prefix, '')})\n\n"]
     data = bus(transport, stop_id)
     if data is not None:
         if data:
@@ -493,6 +533,7 @@ def text_bus(transport, stop_id, msg):
     else:
         msg.append("<b>Debido a un error en el servicio de EMT "
                    "no es posible obtener información en estos momentos.</b>")
+    return msg
 
 
 def index(transport, stop_id):
@@ -502,3 +543,82 @@ def index(transport, stop_id):
 def store_suggestion(text):
     with open('suggestions.txt', 'a') as f:
         f.write(f'{text}\n\n')
+
+
+def normalize(word):
+    nfkd = unicodedata.normalize('NFKD', word)
+    return u''.join([c for c in nfkd if not unicodedata.combining(c)]).upper()
+
+
+def is_int(text):
+    try:
+        int(text)
+    except ValueError:
+        return False
+    return True
+
+
+def bus_id(transport, code):
+    bid = f'EMT_{code}'
+    if transport == 'urb':
+        bid = f'CRTM_8_{code}'
+    return bid
+
+
+def stop_data(transport, index, inline=False):
+    stop_id, stop = transport_info(transport, index)
+    prefix = 'time_cli'
+    if inline:
+        prefix = 'time_inline'
+    if transport == 'emt':
+        stop = f"{stop} ({stop_id.replace('EMT_', '')})"
+    elif transport == 'urb':
+        stop = f"{stop} ({stop_id.replace('CRTM_8_', '')})"
+    return (stop, f"{prefix}_{transport}_{index}")
+
+
+def stopname_matches(transport, stopnames, inline=False):
+    res = []
+    for word in stopnames:
+        for index, stop in enumerate(DATA['proc'][transport]['names']):
+            if normalize(word) in normalize(stop):
+                data = stop_data(transport, index, inline)
+                if data not in res:
+                    res.append(data)
+    return res
+
+
+def stopnumber_match(transport, stopnumber):
+    match = False
+    for idx, stop_id in enumerate(DATA['proc'][transport]['ids']):
+        cmp = bus_id(transport, stopnumber)
+        if cmp == stop_id:
+            match = True
+            break
+    return match, idx
+
+
+def text_transport(transport, index):
+    stop_id, stop = transport_info(transport, index)
+    if transport == 'metro':
+        msg = text_metro(stop, stop_id)
+    elif transport == 'cerc':
+        msg = text_cercanias(stop, stop_id)
+    else:
+        msg = text_bus(transport, stop, stop_id)
+    return msg, stop_id
+
+
+def result(transport, rid, msg):
+    return InlineQueryResultArticle(
+        id=rid, title=msg.capitalize(),
+        input_message_content=InputTextMessageContent(f"Recopilando {msg}"),
+        reply_markup=gui.markup([("🔃 Actualizar 🔃", rid)]),
+        thumb_url=f'{LOGO}/{transport}.png',
+        thumb_height=48,
+        thumb_width=48
+    )
+
+
+def is_bus(transport):
+    return transport in CMD_TRANS['types']['bus']

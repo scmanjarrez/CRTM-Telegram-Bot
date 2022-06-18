@@ -5,10 +5,12 @@
 # Copyright (c) 2022 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
 
+from telegram.error import BadRequest
+
 import crtm_gui as gui
 import database as db
-import unicodedata
 import utils as ut
+import traceback
 
 
 HELP = (
@@ -50,7 +52,12 @@ HELP = (
     "\n\n"
 
     "❕ <b>Nota:</b> No es necesario dar el nombre completo, "
-    "dame una parte y te sugeriré coincidencias."
+    "dame una parte y te sugeriré coincidencias.\n\n"
+    ""
+    "❕ <b>Nota2:</b> Si no deseas usar interactuar con el bot, también "
+    "puedes usarme en modo online de esta forma:\n@crtmadrid_bot "
+    "<code>[metro|cercanias|emt|interurbano]</code> "
+    "<code>[nombre|número]</code>."
 )
 
 
@@ -97,26 +104,13 @@ def card(update, context):
         ut.send(update, msg)
 
 
-def _normalize(word):
-    nfkd = unicodedata.normalize('NFKD', word)
-    return u''.join([c for c in nfkd if not unicodedata.combining(c)]).lower()
-
-
-def _is_int(text):
-    try:
-        int(text)
-    except ValueError:
-        return False
-    return True
-
-
 def times(update, context):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
     else:
         msg = "Es necesario que me indiques un nombre"
-        sugg = []
+        suggs = []
         cmd = update.message.text.split()[0]
         if cmd == '/metro':
             msg = f"{msg}.\n\n<b>Ejemplo</b>:\n- /metro <code>príncipe</code>"
@@ -135,36 +129,17 @@ def times(update, context):
                        f"<code>aluche</code>\n- /interurbano <code>10866"
                        f"</code>")
                 cmd = 'urb'
-            if context.args and _is_int(context.args[0]):
-                match = False
-                for idx, stop_id in enumerate(ut.DATA['proc'][cmd]['ids']):
-                    code = context.args[0]
-                    if cmd == 'emt':
-                        cmp = f'EMT_{code}'
-                    else:
-                        cmp = f'CRTM_8_{code}'
-                    if cmp == stop_id:
-                        match = True
-                        break
+            if context.args and ut.is_int(context.args[0]):
+                match, index = ut.stopnumber_match(cmd, context.args[0])
                 if match:
-                    gui.bus_time(update, cmd, idx)
+                    gui.bus_time(update, cmd, index)
                     return
         if context.args:
             msg = "Estas paradas encajan con tu búsqueda"
-            for word in context.args:
-                for index, stop in enumerate(ut.DATA['proc'][cmd]['names']):
-                    if _normalize(word) in _normalize(stop):
-                        stop_id, _ = ut.transport_info(cmd, index)
-                        if cmd == 'emt':
-                            stop = f"{stop} ({stop_id.replace('EMT_', '')})"
-                        elif cmd == 'urb':
-                            stop = f"{stop} ({stop_id.replace('CRTM_8_', '')})"
-                        data = (stop, f"time_cli_{cmd}_{index}")
-                        if data not in sugg:
-                            sugg.append(data)
-            if not sugg:
+            suggs = ut.stopname_matches(cmd, context.args)
+            if not suggs:
                 msg = "No existen paradas con ese criterio"
-        ut.send(update, msg, reply_markup=gui.markup(sugg))
+        ut.send(update, msg, reply_markup=gui.markup(suggs))
 
 
 def favorites(update, context):
@@ -243,3 +218,62 @@ def remove(update, context):
         msg = ("Es una pena verte marchar 😢. "
                "He borrado toda la información que tenía sobre ti.")
         ut.send(update, msg)
+
+
+def inline_text(update, context, msg_id, callback_data):
+    kb = []
+    args = callback_data.split('_')
+    msg, stop_id = ut.text_transport(args[-2], args[-1])
+    gui._answer(update)
+    gui.add_upd_button(kb, callback_data)
+    try:
+        context.bot.edit_message_text(
+            ''.join(msg), inline_message_id=msg_id,
+            parse_mode=ut.ParseMode.HTML,
+            reply_markup=gui.markup([("🔃 Actualizar 🔃", callback_data)]))
+    except BadRequest as br:
+        if not str(br).startswith("Message is not modified:"):
+            print(f"***  Exception caught in edit "
+                  f"({update.effective_message.chat.id}): ", br)
+            traceback.print_stack()
+
+
+def inline_message(update, context):
+    chosen = update.chosen_inline_result
+    inline_text(update, context,
+                chosen.inline_message_id, chosen.result_id)
+
+
+def inline_query(update, context):
+    query = update.inline_query.query
+    if query == "":
+        return
+    args = query.split()
+    cmd = ut.normalize(args[0]).lower()
+    results = []
+    if len(args) > 1:
+        if cmd in ut.CMD_TRANS:
+            transport, stype = ut.CMD_TRANS[cmd]
+            msg = f"tiempos en {stype}"
+            if ut.is_bus(transport) and ut.is_int(args[1]):
+                match, index = ut.stopnumber_match(transport, args[1])
+                if match:
+                    stop_id, stop = ut.transport_info(transport, index)
+                    stop_id = stop_id.split('_')[-1]
+                    results.append(
+                        ut.result(transport,
+                                  f'time_inline_{transport}_{index}',
+                                  f"{msg} {stop} ({stop_id})")
+                    )
+            else:
+                matches = ut.stopname_matches(transport,
+                                              args[1:], inline=True)
+                for match in matches:
+                    results.append(
+                        ut.result(transport, match[1], f"{msg} {match[0]}")
+                    )
+        else:
+            return
+    else:
+        return
+    update.inline_query.answer(results[:50])
