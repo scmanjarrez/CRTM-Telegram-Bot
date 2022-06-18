@@ -153,7 +153,7 @@ def times(update, context):
             msg = "Estas paradas encajan con tu búsqueda"
             for word in context.args:
                 for index, stop in enumerate(ut.DATA['proc'][cmd]['names']):
-                    if _normalize(word) in stop.lower():
+                    if _normalize(word) in _normalize(stop):
                         stop_id, _ = ut.transport_info(cmd, index)
                         if cmd == 'emt':
                             stop = f"{stop} ({stop_id.replace('EMT_', '')})"
