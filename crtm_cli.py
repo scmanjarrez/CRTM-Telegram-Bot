@@ -24,7 +24,8 @@ HELP = (
     "\n"
     "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
     "transporte. Elimínalo enviando -1."
-    "\n"
+    "\n\n"
+
     "❔ /metro <code>&lt;nombre&gt;</code> - Tiempos de la estación "
     "de metro."
     "\n"
@@ -36,7 +37,8 @@ HELP = (
     "\n"
     "❔ /interurbano <code>&lt;nombre/número&gt;</code> - Tiempos de la "
     "parada de autobuses (Interurbano)."
-    "\n"
+    "\n\n"
+
     "❔ /favoritos - Lista de favoritos."
     "\n"
     "❔ /renombrar - Renombrar un favorito."
