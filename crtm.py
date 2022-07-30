@@ -87,6 +87,10 @@ def setup_handlers(dispatch, job_queue):
                                   filters=~Filters.update.edited_message)
     dispatch.add_handler(card_handler)
 
+    save_handler = CommandHandler('guardar_abono', cli.save_card,
+                                  filters=~Filters.update.edited_message)
+    dispatch.add_handler(save_handler)
+
     metro_handler = CommandHandler('metro', cli.times,
                                    filters=~Filters.update.edited_message)
     dispatch.add_handler(metro_handler)

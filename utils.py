@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-
 # SPDX-License-Identifier: MIT
+
 
 # Copyright (c) 2022 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
@@ -308,7 +308,8 @@ def card(uid, cardn=None):
                 return None
             cardinfo = dt['data']
             cardcharge = dt['carga']['data']
-            db.add_card(uid, cardn)
+            if db.save_card(uid):
+                db.add_card(uid, cardn)
     info = {}
     for ci in cardinfo:
         if ci['name'] == 'ContractName':
@@ -340,7 +341,10 @@ def metro(stop_id):
         return None
     else:
         data = json.loads(post.text)
-        cur = data['result']['referenceTime']
+        try:
+            cur = data['result']['referenceTime']
+        except KeyError:
+            return None
         info = {}
         for t in data['result']['times']:
             line = f"Línea {RE['code'].search(t['codLine']).group(1)}"
@@ -383,10 +387,11 @@ def cercanias(stop_id):
                     info[DATA['idx']['cerc'][idy]] = {}
                 for tm in times:
                     if tm[1] not in info[DATA['idx']['cerc'][idy]]:
-                        info[DATA['idx']['cerc'][idy]][tm[1]] = []
-                    info[DATA['idx']['cerc'][idy]][tm[1]].append(
+                        info[DATA['idx']['cerc'][idy]][tm[1]] = ['', []]
+                    info[DATA['idx']['cerc'][idy]][tm[1]][0] = tm[3]
+                    info[DATA['idx']['cerc'][idy]][tm[1]][1].append(
                         (tm[0] if tm[0] else 'Llegando',
-                         f"T.{tm[4]}" if tm[4] else '?'))
+                         f"Vía {tm[4]}" if tm[4] else ""))
         return info
 
 
@@ -470,42 +475,55 @@ def text_card(uid, cardn=None):
 def text_metro(stop, stop_id):
     msg = [f"Tiempos en estación {stop}\n\n"]
     data = metro(stop_id)
-    if data:
-        for dline in data:
-            msg.append(f"<b>{dline}:</b>\n")
-            for direc in data[dline]:
-                msg.append(
-                    f"- Destino: "
-                    f"<code>{data[dline][direc]['name']}</code>"
-                    f"\n")
-                msg.append(
-                    f"- Tiempo(s): "
-                    f"<code>{', '.join(data[dline][direc]['times'])}"
-                    f"</code>"
-                    f"\n\n")
+    if data is not None:
+        if data:
+            for dline in data:
+                msg.append(f"<b>{dline}:</b>\n")
+                for direc in data[dline]:
+                    msg.append(
+                        f"- Destino: "
+                        f"<code>{data[dline][direc]['name']}</code>"
+                        f"\n")
+                    msg.append(
+                        f"- Tiempo(s): "
+                        f"<code>{', '.join(data[dline][direc]['times'])}"
+                        f"</code>"
+                        f"\n\n")
+        else:
+            msg.append("<b>No hay tiempos disponibles.</b>")
     else:
-        msg.append("<b>No hay tiempos disponibles.</b>")
+        msg.append("<b>Debido a un error en el servicio de metro "
+                   "no es posible obtener información en estos momentos.</b>")
     return msg
 
 
 def text_cercanias(stop, stop_id):
     msg = [f"Tiempos en estación {stop}\n\n"]
     data = cercanias(stop_id)
-    if data:
-        for dtype in data:
-            msg.append(f"<b>{dtype.capitalize()}:</b>\n")
-            for direc in data[dtype]:
-                times = [f"{tm[0]} ({tm[1]})" for tm in data[dtype][direc]]
-                msg.append(
-                    f"- {'Origen' if dtype == 'llegadas' else 'Destino'}: "
-                    f"<code>{direc}</code>"
-                    f"\n")
-                msg.append(
-                    f"- Tiempo(s): "
-                    f"<code>{', '.join(times)}</code>"
-                    f"\n\n")
+    if data is not None:
+        if data:
+            for dtype in data:
+                msg.append(f"<b>{dtype.capitalize()}:</b>\n")
+                for direc in data[dtype]:
+                    line = "{}".format(
+                        f" ({data[dtype][direc][0]})"
+                        if data[dtype][direc][0] else "")
+                    times = ["{}{}".format(tm[0],
+                                           f" ({tm[1]})" if tm[1] else "")
+                             for tm in data[dtype][direc][1]]
+                    msg.append(
+                        f"- {'Origen' if dtype == 'llegadas' else 'Destino'}: "
+                        f"<code>{direc}{line}</code>"
+                        f"\n")
+                    msg.append(
+                        f"- Tiempo(s): "
+                        f"<code>{', '.join(times)}</code>"
+                        f"\n\n")
+        else:
+            msg.append("<b>No hay tiempos disponibles.</b>")
     else:
-        msg.append("<b>No hay tiempos disponibles.</b>")
+        msg.append("<b>Debido a un error en el servicio de renfe "
+                   "no es posible obtener información en estos momentos.</b>")
     return msg
 
 

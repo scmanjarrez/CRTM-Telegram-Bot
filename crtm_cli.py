@@ -24,6 +24,9 @@ HELP = (
     "\n"
     "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
     "transporte. Elimínalo enviando -1."
+    "\n"
+    "❔ /guardar_abono - Activa/desactiva el guardado del abono en la "
+    "base de datos. Desactivado por defecto."
     "\n\n"
 
     "❔ /metro <code>&lt;nombre&gt;</code> - Tiempos de la estación "
@@ -103,6 +106,19 @@ def card(update, context):
                 msg = "He eliminado la información sobre tu abono"
             else:
                 msg = ut.text_card(uid, cardn)
+        ut.send(update, msg)
+
+
+def save_card(update, context):
+    uid = ut.uid(update)
+    if not db.cached(uid):
+        ut.not_started(update)
+    else:
+        if db.save_card(uid):
+            msg = "Se ha desactivado el guardado del abono en la base de datos"
+        else:
+            msg = "Se ha activado el guardado del abono en la base de datos"
+        db.toggle_card(uid)
         ut.send(update, msg)
 
 

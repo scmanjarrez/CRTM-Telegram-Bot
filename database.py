@@ -7,7 +7,7 @@ from contextlib import closing
 
 import sqlite3 as sql
 
-DB = 'transporte.db'
+DB = 'crtm.db'
 
 
 def setup_db():
@@ -17,7 +17,8 @@ def setup_db():
                 """
                 CREATE TABLE IF NOT EXISTS users (
                     uid INTEGER PRIMARY KEY,
-                    card TEXT DEFAULT NULL
+                    card TEXT DEFAULT NULL,
+                    save INTEGER DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS transports (
@@ -141,6 +142,28 @@ def card(uid):
                 'WHERE uid = ?',
                 [uid])
             return cur.fetchone()[0]
+
+
+def save_card(uid):
+    with closing(sql.connect(DB)) as db:
+        with closing(db.cursor()) as cur:
+            cur.execute(
+                'SELECT save '
+                'FROM users '
+                'WHERE uid = ?',
+                [uid])
+            return cur.fetchone()[0]
+
+
+def toggle_card(uid):
+    with closing(sql.connect(DB)) as db:
+        with closing(db.cursor()) as cur:
+            cur.execute(
+                'UPDATE users '
+                'SET save = NOT save '
+                'WHERE uid = ?',
+                [uid])
+            db.commit()
 
 
 def add_card(uid, cardn):
