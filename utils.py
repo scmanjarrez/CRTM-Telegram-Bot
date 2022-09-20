@@ -596,14 +596,11 @@ def stop_data(transport, index, inline=False):
 
 
 def stopname_matches(transport, stopnames, inline=False):
-    res = []
+    stops = list(enumerate(DATA['proc'][transport]['names']))
     for word in stopnames:
-        for index, stop in enumerate(DATA['proc'][transport]['names']):
-            if normalize(word) in normalize(stop):
-                data = stop_data(transport, index, inline)
-                if data not in res:
-                    res.append(data)
-    return res
+        stops = [(index, stop) for index, stop in stops
+                 if normalize(word) in normalize(stop)]
+    return [stop_data(transport, index, inline) for index, _ in stops]
 
 
 def stopnumber_match(transport, stopnumber):

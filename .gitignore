@@ -3,7 +3,8 @@ endpoints.py
 .token
 .config
 raw/
-transporte.db
+crtm.db
+server/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

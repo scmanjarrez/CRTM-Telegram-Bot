@@ -202,7 +202,7 @@ def suggest(update, context):
         if uid not in ut.STATE:
             ut.STATE[uid] = ('suggest',)
         ut.send(update,
-                "Dime qué debería mejorar o añadir, haré lo posible "
+                "Dime qué debería mejorar o añadir al bot, haré lo posible "
                 "por implementarlo.")
 
 
