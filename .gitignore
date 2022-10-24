@@ -1,7 +1,7 @@
 data/
 endpoints.py
 .token
-.config
+.config.json
 raw/
 crtm.db
 server/

@@ -12,7 +12,6 @@ from dateutil import parser as ps
 from bs4 import BeautifulSoup
 from pathlib import Path
 
-import configparser as cfg
 import endpoints as end  # not uploaded for privacy reasons
 import crtm_gui as gui
 import requests as req
@@ -46,13 +45,14 @@ CMD_TRANS = {
     }
 }
 FILES = {
-    'cfg': '.config',
+    'cfg': '.config.json',
     'token': '.token',
     'metro': 'data/metro.json',
     'cerc': 'data/cercanias.json',
     'emt': 'data/emt.json',
     'urb': 'data/interurbanos.json'
 }
+CONFIG = {}
 DATA = {
     'cfg': None,
     'token': None,
@@ -114,13 +114,18 @@ def _debug_request(req):
     print(req.request.url, req.request.body, req.request.headers)
 
 
-def config(key):
-    if DATA['cfg'] is None:
-        parser = cfg.ConfigParser()
-        parser.read(FILES['cfg'])
-        DATA['cfg'] = {k: v for section in parser.sections()
-                       for k, v in parser[section].items()}
-    return DATA['cfg'][key]
+def load_config():
+    global CONFIG
+    with open(FILES['cfg']) as f:
+        CONFIG = json.load(f)
+
+
+def setting(key):
+    return CONFIG['settings'][key]
+
+
+def api(key):
+    return CONFIG['api'][key]
 
 
 def download_bus():
@@ -214,12 +219,12 @@ def token():
         except FileNotFoundError:
             DATA['token'] = 'null'
     post = req.post(f'{end.URL["token"]}{end.END["info"]}',
-                    params={'key': config('cloud')},
+                    params={'key': api('cloud')},
                     data={'idToken': DATA['token']},
                     headers=end.headers('register'))
     if post.status_code == 400:
         post = req.post(f'{end.URL["token"]}{end.END["sign"]}',
-                        params={'key': config('cloud')},
+                        params={'key': api('cloud')},
                         headers=end.headers('register'))
         data = json.loads(post.text)
         DATA['token'] = data['idToken']

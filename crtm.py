@@ -149,22 +149,25 @@ if __name__ == '__main__':
 
     if os.path.isfile(ut.FILES['cfg']):
         db.setup_db()
-        updater = Updater(token=ut.config('bot'), use_context=True)
+        ut.load_config()
+
+        updater = Updater(token=ut.setting('token'), use_context=True)
         dispatcher = updater.dispatcher
         setup_handlers(dispatcher, updater.job_queue)
+
         ut.load_data()
         ut.train_lines('metro')
         ut.train_lines('cerc')
         ut.bus_lines('emt')
         ut.bus_lines('urb')
 
-        updater.start_webhook(listen=ut.config('listen'),
-                              port=ut.config('port'),
-                              url_path=ut.config('bot'),
-                              cert=ut.config('cert'),
+        updater.start_webhook(listen=ut.setting('listen'),
+                              port=ut.setting('port'),
+                              url_path=ut.setting('token'),
+                              cert=ut.setting('cert'),
                               webhook_url=(f"https://"
-                                           f"{ut.config('ip')}/"
-                                           f"{ut.config('bot')}")
+                                           f"{ut.setting('ip')}/"
+                                           f"{ut.setting('token')}")
                               )
         # updater.start_polling()
         updater.idle()
