@@ -307,25 +307,38 @@ def card(uid, cardn=None):
                   params={'cardNumber': f'{cardn}'},
                   headers=end.headers())
     data = json.loads(get.text)
+    recharge = False
     for dt in data['ctmTitles']:
         if dt['num'] == '1':
             if 'data' not in dt and 'carga' not in dt:
                 return None
             cardinfo = dt['data']
-            cardcharge = dt['carga']['data']
+            if 'recarga' in dt:
+                cardcharge = dt['recarga']['data']
+                recharge = True
+            else:
+                cardcharge = dt['carga']['data']
             if db.save_card(uid):
                 db.add_card(uid, cardn)
     info = {}
     for ci in cardinfo:
         if ci['name'] == 'ContractName':
             info['type'] = ci['value']
+    tags = {
+        'firstl_date': ('ChargeFirstUseDate',
+                        'RechargeFirstUseDate'),
+        'first_date': ('AccessEventInFirstPayDateCe',
+                       'AccessEventInFirstPayDateRrge'),
+        'last_date': ('ChargeEndDate',
+                      'RechargeEndDate')
+    }
+    idx = 0
+    if recharge:
+        idx = 1
     for cc in cardcharge:
-        if cc['name'] == 'ChargeFirstUseDate':
-            info['firstl_date'] = cc['value']
-        elif cc['name'] == 'AccessEventInFirstPayDateCe':
-            info['first_date'] = cc['value']
-        elif cc['name'] == 'ChargeEndDate':
-            info['last_date'] = cc['value']
+        for tag in tags:
+            if cc['name'] == tags[tag][idx]:
+                info[tag] = cc['value']
     return info
 
 

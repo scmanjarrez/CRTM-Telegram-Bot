@@ -60,7 +60,7 @@ HELP = (
     "dame una parte y te sugeriré coincidencias.\n\n"
     ""
     "❕ <b>Nota2:</b> Si no deseas usar interactuar con el bot, también "
-    "puedes usarme en modo online de esta forma:\n@crtmadrid_bot "
+    "puedes usarme en modo inline de esta forma:\n@crtmadrid_bot "
     "<code>[metro|cercanias|emt|interurbano]</code> "
     "<code>[nombre|número]</code>."
 )
