@@ -36,7 +36,7 @@ Código fuente del bot accesible desde [@crtmadrid\_bot](https://t.me/crtmadrid_
 
 
 # Licencia
-    Copyright (c) 2022 scmanjarrez. All rights reserved.
+    Copyright (c) 2022-2023 scmanjarrez. All rights reserved.
     This work is licensed under the terms of the MIT license.
 
 Puedes encontrar la licencia completa en
