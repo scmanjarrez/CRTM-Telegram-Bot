@@ -155,11 +155,8 @@ if __name__ == '__main__':
         dispatcher = updater.dispatcher
         setup_handlers(dispatcher, updater.job_queue)
 
-        ut.load_data()
-        ut.train_lines('metro')
-        ut.train_lines('cerc')
-        ut.bus_lines('emt')
-        ut.bus_lines('urb')
+        ut.update_data(None)
+        ut.downloader_daily(updater.job_queue)
 
         updater.start_webhook(listen=ut.setting('listen'),
                               port=ut.setting('port'),

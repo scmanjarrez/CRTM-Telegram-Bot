@@ -18,7 +18,9 @@ import requests as req
 import database as db
 import unicodedata
 import traceback
+import datetime
 import json
+import pytz
 import re
 
 
@@ -53,61 +55,7 @@ FILES = {
     'urb': 'data/interurbanos.json'
 }
 CONFIG = {}
-DATA = {
-    'cfg': None,
-    'token': None,
-    'raw': {
-        'metro': None,
-        'cerc': None,
-        'emt': None,
-        'urb': None,
-    },
-    'idx': {
-        'metro': {
-            '1': 'Sentido Horario',
-            '2': 'Sentido Antihorario'
-        },
-        'cerc': {
-            0: 'salidas', 1: 'llegadas'
-        },
-    },
-    'proc': {
-        'metro': {
-            'lines': {
-                '1': {}, '2': {}, '3': {}, '4': {},
-                '5': {}, '6': {}, '7': {}, '8': {},
-                '9': {}, '10': {}, '11': {}, '12': {},
-                'R': {}
-            },
-            'ban': ['13', '14', '15'],
-            'stops': {},
-            'index': {},
-            'names': [],
-            'ids': []
-        },
-        'cerc': {
-            'lines': {
-                'C1': {}, 'C2': {}, 'C3': {}, 'C4': {},
-                'C5': {}, 'C7': {}, 'C8': {}, 'C9': {},
-                'C10': {}
-            },
-            'stops': {},
-            'index': {},
-            'names': [],
-            'ids': []
-        },
-        'emt': {
-            'index': {},
-            'names': [],
-            'ids': []
-        },
-        'urb': {
-            'index': {},
-            'names': [],
-            'ids': []
-        }
-    }
-}
+DATA = {}
 
 
 def _debug_request(req):
@@ -170,7 +118,7 @@ def parse_bus_data(data):
 
 
 def load_data():
-    # download_bus()
+    download_bus()
     with open(FILES['cerc'], 'r') as f:
         DATA['raw']['cerc'] = json.load(f)
     with open(FILES['metro'], 'r') as f:
@@ -655,3 +603,74 @@ def result(transport, rid, msg):
 
 def is_bus(transport):
     return transport in CMD_TRANS['types']['bus']
+
+
+def update_data(context):
+    global DATA
+    DATA = {
+        'cfg': None,
+        'token': None,
+        'raw': {
+            'metro': None,
+            'cerc': None,
+            'emt': None,
+            'urb': None,
+        },
+        'idx': {
+            'metro': {
+                '1': 'Sentido Horario',
+                '2': 'Sentido Antihorario'
+            },
+            'cerc': {
+                0: 'salidas', 1: 'llegadas'
+            },
+        },
+        'proc': {
+            'metro': {
+                'lines': {
+                    '1': {}, '2': {}, '3': {}, '4': {},
+                    '5': {}, '6': {}, '7': {}, '8': {},
+                    '9': {}, '10': {}, '11': {}, '12': {},
+                    'R': {}
+                },
+                'ban': ['13', '14', '15'],
+                'stops': {},
+                'index': {},
+                'names': [],
+                'ids': []
+            },
+            'cerc': {
+                'lines': {
+                    'C1': {}, 'C2': {}, 'C3': {}, 'C4': {},
+                    'C5': {}, 'C7': {}, 'C8': {}, 'C9': {},
+                    'C10': {}
+                },
+                'stops': {},
+                'index': {},
+                'names': [],
+                'ids': []
+            },
+            'emt': {
+                'index': {},
+                'names': [],
+                'ids': []
+            },
+            'urb': {
+                'index': {},
+                'names': [],
+                'ids': []
+            }
+        }
+    }
+    load_data()
+    train_lines('metro')
+    train_lines('cerc')
+    bus_lines('emt')
+    bus_lines('urb')
+
+
+def downloader_daily(queue):
+    update_time = datetime.time(hour=5,
+                                tzinfo=pytz.timezone('Europe/Madrid'))
+    queue.run_daily(update_data, update_time,
+                    context=queue, name='downloader_daily')
