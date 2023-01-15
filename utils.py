@@ -672,5 +672,5 @@ def update_data(context):
 def downloader_daily(queue):
     update_time = datetime.time(hour=5,
                                 tzinfo=pytz.timezone('Europe/Madrid'))
-    queue.run_daily(update_data, update_time,
+    queue.run_daily(update_data, update_time, days=(0,),
                     context=queue, name='downloader_daily')
