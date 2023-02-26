@@ -76,7 +76,7 @@ def api(key):
     return CONFIG['api'][key]
 
 
-def download_bus():
+def download_api_data():
     emt_path = Path(FILES['emt'])
     emt_path.parent.mkdir(exist_ok=True)
     get = req.get(f'{end.URL["cloud"]}{end.END["raw_emt"]}',
@@ -84,30 +84,49 @@ def download_bus():
                   headers=end.headers())
     if get.status_code != 200:
         return
-    data = parse_bus_data(json.loads(get.text))
+    data = parse_api_data(json.loads(get.text))
     with emt_path.open('w') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
+
+    urb_path = Path(FILES['urb'])
     get = req.get(f'{end.URL["cloud"]}{end.END["raw_urb"]}',
                   params={'a': 'CRTM', 't': 3},
                   headers=end.headers())
     if get.status_code != 200:
         return
-    urb_path = Path(FILES['urb'])
-    data = parse_bus_data(json.loads(get.text))
+    data = parse_api_data(json.loads(get.text))
     with urb_path.open('w') as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
+    metro_path = Path(FILES['metro'])
+    get = req.get(f'{end.URL["cloud"]}{end.END["raw_metro"]}',
+                  params={'a': 'CRTM', 't': 0},
+                  headers=end.headers())
+    if get.status_code != 200:
+        return
+    ml_data = parse_api_data(json.loads(get.text))
+    get = req.get(f'{end.URL["cloud"]}{end.END["raw_metro"]}',
+                  params={'a': 'CRTM', 't': 1},
+                  headers=end.headers())
+    if get.status_code != 200:
+        return
+    data = parse_api_data(json.loads(get.text), ml_data)
+    with metro_path.open('w') as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
-def parse_bus_data(data):
-    names = {
-        'station': {},
-        'bus': {}
-    }
+
+def parse_api_data(data, fill=None):
+    names = fill
+    if names is None:
+        names = {
+            'station': {},
+            'line': {}
+        }
     for el in data['elements']:
-        if el['r']['n'] not in names['bus']:
-            names['bus'][el['r']['i']] = {}
-            names['bus'][el['r']['i']]['id'] = el['r']['h']
-            names['bus'][el['r']['i']]['name'] = el['r']['n']
+        if el['r']['n'] not in names['line']:
+            names['line'][el['r']['i']] = {}
+            names['line'][el['r']['i']]['id'] = el['r']['h']
+            names['line'][el['r']['i']]['name'] = el['r']['n']
         for sts in el['sts']:
             if sts['i'] not in names['station']:
                 names['station'][sts['i']] = {}
@@ -118,7 +137,7 @@ def parse_bus_data(data):
 
 
 def load_data():
-    download_bus()
+    download_api_data()
     with open(FILES['cerc'], 'r') as f:
         DATA['raw']['cerc'] = json.load(f)
     with open(FILES['metro'], 'r') as f:
@@ -129,30 +148,24 @@ def load_data():
         DATA['raw']['urb'] = json.load(f)
 
 
-def train_lines(transport):
-    for idx, stop in enumerate(DATA['raw'][transport]):
-        idname = 'cloudId'
-        if transport == 'cerc':
-            idname = 'id'
-        DATA['proc'][transport]['index'][stop[idname]] = idx
-        DATA['proc'][transport]['names'].append(stop['name'])
-        DATA['proc'][transport]['ids'].append(stop[idname])
+def train_lines():
+    for idx, stop in enumerate(DATA['raw']['cerc']):
+        idname = 'id'
+        DATA['proc']['cerc']['index'][stop[idname]] = idx
+        DATA['proc']['cerc']['names'].append(stop['name'])
+        DATA['proc']['cerc']['ids'].append(stop[idname])
 
         first = stop['name'][0]
-        if first not in DATA['proc'][transport]['stops']:
-            DATA['proc'][transport]['stops'][first] = []
-        DATA['proc'][transport]['stops'][first].append(idx)
+        if first not in DATA['proc']['cerc']['stops']:
+            DATA['proc']['cerc']['stops'][first] = []
+        DATA['proc']['cerc']['stops'][first].append(idx)
         for line in stop['lineIds']:
-            if transport == 'cerc' or line not in DATA[
-                    'proc'][transport]['ban']:
-                if transport == 'metro' and line == '16':
-                    line = 'R'
-                if first not in DATA['proc'][transport]['lines'][line]:
-                    DATA['proc'][transport]['lines'][line][first] = []
-                DATA['proc'][transport]['lines'][line][first].append(idx)
+            if first not in DATA['proc']['cerc']['lines'][line]:
+                DATA['proc']['cerc']['lines'][line][first] = []
+            DATA['proc']['cerc']['lines'][line][first].append(idx)
 
 
-def bus_lines(transport):
+def transport_lines(transport):
     for idx, info in enumerate(DATA['raw'][transport]['station'].items()):
         DATA['proc'][transport]['index'][info[0]] = idx
         DATA['proc'][transport]['names'].append(info[1]['name'])
@@ -209,9 +222,10 @@ def send_bot(bot, uid, msg, reply_markup=None, disable_preview=True):
 
 def edit(update, msg, reply_markup, disable_preview=True):
     try:
-        update.callback_query.edit_message_text(msg, ParseMode.HTML,
-                                                reply_markup=reply_markup,
-                                                disable_web_page_preview=disable_preview)  # noqa
+        update.callback_query.edit_message_text(
+            msg, ParseMode.HTML,
+            reply_markup=reply_markup,
+            disable_web_page_preview=disable_preview)
     except BadRequest as br:
         if not str(br).startswith("Message is not modified:"):
             print(f"***  Exception caught in edit "
@@ -297,37 +311,6 @@ def _metro_time(ref_time, next_time):
     return str(next)
 
 
-def metro(stop_id):
-    try:
-        post = req.post(f'{end.URL["cloud"]}{end.END["metro"]}',
-                        json={'data': {'stopCode': stop_id}},
-                        headers=end.headers(),
-                        timeout=15)
-    except req.exceptions.ReadTimeout:
-        return None
-    else:
-        data = json.loads(post.text)
-        try:
-            cur = data['result']['referenceTime']
-        except KeyError:
-            return None
-        info = {}
-        for t in data['result']['times']:
-            line = f"Línea {RE['code'].search(t['codLine']).group(1)}"
-            if line not in info:
-                info[line] = {}
-            if t['direction'] not in info[line]:
-                info[line][t['direction']] = {'name': '', 'times': []}
-            if t['codLine'] == '4__6___':
-                info[line][t['direction']]['name'] = DATA[
-                    'idx']['metro'][t['direction']]
-            else:
-                info[line][t['direction']]['name'] = t['destination']
-            info[line][t['direction']]['times'].append(
-                _metro_time(cur, t['time']))
-        return info
-
-
 def cercanias(stop_id):
     try:
         get = req.get(end.URL['adif'],
@@ -361,10 +344,11 @@ def cercanias(stop_id):
         return info
 
 
-def bus(transport, stop_id):
+def real_time(transport, stop_id):
     try:
         get = req.get(f'{end.URL["cloud"]}{end.END[transport]}',
-                      params={'stopId': stop_id, 'type': 3},
+                      params={'stopId': stop_id,
+                              'type': 3 if transport != 'metro' else 1},
                       headers=end.headers(),
                       timeout=15)
     except req.exceptions.ReadTimeout:
@@ -380,10 +364,18 @@ def bus(transport, stop_id):
         for bs in data['rtl']:
             sec = [str(binfo['s'] // 60) if binfo['s'] > 60 else 'Llegando'
                    for binfo in bs['l']]
-            bid = DATA['raw'][transport]['bus'][bs['r']]['id']
-            info[bid] = {}
-            info[bid]['name'] = bs['h']
-            info[bid]['times'] = sec
+            bid = DATA['raw'][transport]['line'][bs['r']]['id']
+            if transport == 'metro':
+                if bid not in info:
+                    info[bid] = []
+                tmp = {}
+                tmp['name'] = bs['h']
+                tmp['times'] = sec
+                info[bid].append(tmp)
+            else:
+                info[bid] = {}
+                info[bid]['name'] = bs['h']
+                info[bid]['times'] = sec
         return info
 
 
@@ -440,19 +432,19 @@ def text_card(uid, cardn=None):
 
 def text_metro(stop, stop_id):
     msg = [f"Tiempos en estación {stop}\n\n"]
-    data = metro(stop_id)
+    data = real_time('metro', stop_id)
     if data is not None:
         if data:
-            for dline in data:
-                msg.append(f"<b>{dline}:</b>\n")
-                for direc in data[dline]:
+            for line in data:
+                msg.append(f"<b>Línea {line}:</b>\n")
+                for drct in data[line]:
                     msg.append(
                         f"- Destino: "
-                        f"<code>{data[dline][direc]['name']}</code>"
+                        f"<code>{drct['name']}</code>"
                         f"\n")
                     msg.append(
                         f"- Tiempo(s): "
-                        f"<code>{', '.join(data[dline][direc]['times'])}"
+                        f"<code>{', '.join(drct['times'])}"
                         f"</code>"
                         f"\n\n")
         else:
@@ -498,7 +490,7 @@ def text_bus(transport, stop, stop_id):
     if transport == 'urb':
         prefix = 'CRTM_8_'
     msg = [f"Tiempos en parada {stop} ({stop_id.replace(prefix, '')})\n\n"]
-    data = bus(transport, stop_id)
+    data = real_time(transport, stop_id)
     if data is not None:
         if data:
             for line in data:
@@ -663,10 +655,10 @@ def update_data(context):
         }
     }
     load_data()
-    train_lines('metro')
-    train_lines('cerc')
-    bus_lines('emt')
-    bus_lines('urb')
+    train_lines()
+    transport_lines('metro')
+    transport_lines('emt')
+    transport_lines('urb')
 
 
 def downloader_daily(queue):
