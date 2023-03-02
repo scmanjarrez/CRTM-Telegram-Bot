@@ -158,15 +158,21 @@ if __name__ == '__main__':
         ut.update_data(None)
         ut.downloader_daily(updater.job_queue)
 
-        updater.start_webhook(listen=ut.setting('listen'),
-                              port=ut.setting('port'),
-                              url_path=ut.setting('token'),
-                              cert=ut.setting('cert'),
-                              webhook_url=(f"https://"
-                                           f"{ut.setting('ip')}/"
-                                           f"{ut.setting('token')}")
-                              )
-        # updater.start_polling()
-        updater.idle()
+        try:
+            if ut.setting('webhook'):
+                updater.start_webhook(listen=ut.setting('listen'),
+                                      port=ut.setting('port'),
+                                      url_path=ut.setting('token'),
+                                      cert=ut.setting('cert'),
+                                      webhook_url=(f"https://"
+                                                   f"{ut.setting('ip')}/"
+                                                   f"{ut.setting('token')}")
+                                      )
+            else:
+                updater.start_polling()
+            updater.idle()
+        except KeyError:
+            logging.error(f"New setting 'webhook' required "
+                          f"in {ut.FILES['cfg']}. Check README for more info.")
     else:
-        print(f"File {ut.FILES['cfg']} not found.")
+        logging.error(f"File {ut.FILES['cfg']} not found.")

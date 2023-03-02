@@ -21,6 +21,8 @@ Código fuente del bot accesible desde [@crtmadrid\_bot](https://t.me/crtmadrid_
 
     > - **token**: Token del bot de telegram, obtenido a través de [@BotFather](https://t.me/BotFather)
     >
+    > - **webhook**: true to run the bot using webhooks. false to use polling.
+    >
     > - **ip**: La IP del servidor donde se alejará el bot
     >
     > - **port**: El puerto donde se recibirán las actualizaciones de telegram: sólo es posible usar los puertos 443, 80, 88 o 8443.
