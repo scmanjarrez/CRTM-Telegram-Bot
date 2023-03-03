@@ -1,45 +1,55 @@
-# Descripción
-Código fuente del bot accesible desde [@crtmadrid\_bot](https://t.me/crtmadrid_bot).
+# Description
+Source code of [@crtmadrid\_bot](https://t.me/crtmadrid_bot).
 
-# Requisitos
+# Requirements
 - python
 
-# Ejecución
-- Instala las dependencias de python.
+# Run
+- Install python dependencies.
 
     `pip install -r requirements.txt`
 
-- Crea un certificado autofirmado para que el bot pueda comunicarse con los servidores
-  de telegram mediante SSL.
+- Create a self-signed certificate in order to communicate with telegram server using SSL.
 
     `openssl req -newkey rsa:2048 -sha256 -nodes -keyout ferdinand.key
     -x509 -days 3650 -out ferdinand.pem`
 
-- Crea una copia del fichero config.template.json y modifica los valores del archivo .config.json.
+- Create a copy of config.template.json and change the dummy values in .config.json.
 
     `cp config.template.json .config.json`
 
-    > - **token**: Token del bot de telegram, obtenido a través de [@BotFather](https://t.me/BotFather)
+    > - **token** - Telegram bot token, obtained from
+    > [@BotFather](https://t.me/BotFather)
     >
     > - **webhook**: true to run the bot using webhooks. false to use polling.
     >
-    > - **ip**: La IP del servidor donde se alejará el bot
+    > - **log_level**: set level of the logging module.
+    > More info: [log levels](https://docs.python.org/3/library/logging.html#logging-levels)
     >
-    > - **port**: El puerto donde se recibirán las actualizaciones de telegram: sólo es posible usar los puertos 443, 80, 88 o 8443.
+    > - **ip**: Your server ip, where the bot is hosted
     >
-    > - **cert**: El path al certificado (puede ser autofirmado)
+    > - **port**: Port to receive telegram updates: port must be 443, 80, 88 or 8443.
+    >
+    > - **cert**: Path to your server certificate (can be self-signed)
 
-- Ejecuta el bot.
+- Execute the bot.
 
     `./crtm.py`
 
-    > **Nota:** Para ejecutar el bot en el puerto 80, es posible que debas ejecutarlo
-    > con permisos de superusuario (**sudo**).
+    > **Note:** If you run the bot in port 80, it may be needed to run the bot as
+    > superuser (**sudo**).
 
+# Contributing
+Happy to see you willing to make the project better. In order to make a contribution,
+please respect the following format:
+- Imports sorted with usort: `usort format <file>`
+- Code formatted with black (line lenght 79): `black -l 79 <file>`
 
-# Licencia
+> If you are using flake8, ignore E203 warning.
+
+# License
     Copyright (c) 2022-2023 scmanjarrez. All rights reserved.
     This work is licensed under the terms of the MIT license.
 
-Puedes encontrar la licencia completa en
+For a copy, see
 [LICENSE](LICENSE).
