@@ -3,7 +3,7 @@ backports.zoneinfo==0.2.1
 beautifulsoup4==4.11.1
 bs4==0.0.1
 cachetools==4.2.2
-certifi==2022.5.18.1
+certifi==2022.12.07
 charset-normalizer==2.0.12
 idna==3.3
 python-dateutil==2.8.2
