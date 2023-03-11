@@ -102,7 +102,10 @@ def train_menu(update, transport):
     _answer(update)
     keys = list(ut.DATA["proc"][transport]["lines"].keys())
     kb = []
-    for lines in list(ut.chunk(keys)):
+    sort_fn = ut.sort_lines
+    if transport == "cerc":
+        sort_fn = ut.sort_cerc_lines
+    for lines in list(ut.chunk(sorted(keys, key=sort_fn))):
         kb.append(
             button([(line, f"line_menu_{transport}_{line}") for line in lines])
         )
@@ -125,7 +128,7 @@ def train_line_menu(update, transport, line):
     else:
         keys = list(ut.DATA["proc"][transport]["lines"][line].keys())
     kb = []
-    for letters in list(ut.chunk(keys)):
+    for letters in ut.chunk(sorted(keys)):
         kb.append(
             button(
                 [
@@ -158,11 +161,14 @@ def train_station_menu(update, transport, line, letter):
     else:
         idxs = ut.DATA["proc"][transport]["lines"][line][letter]
     kb = []
+    stations = {}
     for idx in idxs:
         _, stop = ut.transport_info(transport, idx)
-        kb.append(
-            button([(stop, f"time_train_{transport}_{line}_{letter}_{idx}")])
-        )
+        stations[stop] = idx
+    kb = [
+        button([(stop, f"time_train_{transport}_{line}_{letter}_{idx}")])
+        for stop, idx in sorted(stations.items())
+    ]
     kb.append(
         button(
             [

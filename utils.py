@@ -42,6 +42,7 @@ RE = {
     "dest": re.compile(r"(Destino:) (.*)"),
     "time": re.compile(r"(Tiempo\(s\):) (.*)"),
     "type": re.compile(r"^(\w+):$"),
+    "metro": re.compile(r"CRTM_\d+__(\w+?)___"),
 }
 CMD_TRANS = {
     "metro": ("metro", "estación"),
@@ -163,27 +164,42 @@ def load_data():
 
 
 def train_lines():
-    for idx, stop in enumerate(DATA["raw"]["cerc"]):
-        idname = "id"
-        DATA["proc"]["cerc"]["index"][stop[idname]] = idx
-        DATA["proc"]["cerc"]["names"].append(stop["name"])
-        DATA["proc"]["cerc"]["ids"].append(stop[idname])
+    for idx, info in enumerate(DATA["raw"]["cerc"]):
+        DATA["proc"]["cerc"]["index"][info["id"]] = idx
+        DATA["proc"]["cerc"]["names"].append(info["name"])
+        DATA["proc"]["cerc"]["ids"].append(info["id"])
 
-        first = stop["name"][0]
+        first = info["name"][0]
         if first not in DATA["proc"]["cerc"]["stops"]:
             DATA["proc"]["cerc"]["stops"][first] = []
         DATA["proc"]["cerc"]["stops"][first].append(idx)
-        for line in stop["lineIds"]:
+        for line in info["lineIds"]:
+            if line not in DATA["proc"]["cerc"]["lines"]:
+                DATA["proc"]["cerc"]["lines"][line] = {}
             if first not in DATA["proc"]["cerc"]["lines"][line]:
                 DATA["proc"]["cerc"]["lines"][line][first] = []
             DATA["proc"]["cerc"]["lines"][line][first].append(idx)
 
 
 def transport_lines(transport):
-    for idx, info in enumerate(DATA["raw"][transport]["station"].items()):
-        DATA["proc"][transport]["index"][info[0]] = idx
-        DATA["proc"][transport]["names"].append(info[1]["name"])
-        DATA["proc"][transport]["ids"].append(info[0])
+    for idx, (station, info) in enumerate(
+        DATA["raw"][transport]["station"].items()
+    ):
+        DATA["proc"][transport]["index"][station] = idx
+        DATA["proc"][transport]["names"].append(info["name"])
+        DATA["proc"][transport]["ids"].append(station)
+        if transport == "metro":
+            first = info["name"][0]
+            if first not in DATA["proc"][transport]["stops"]:
+                DATA["proc"][transport]["stops"][first] = []
+            DATA["proc"][transport]["stops"][first].append(idx)
+            for line in info["lineIds"]:
+                line_id = RE["metro"].match(line).group(1)
+                if line_id not in DATA["proc"][transport]["lines"]:
+                    DATA["proc"][transport]["lines"][line_id] = {}
+                if first not in DATA["proc"][transport]["lines"][line_id]:
+                    DATA["proc"][transport]["lines"][line_id][first] = []
+                DATA["proc"][transport]["lines"][line_id][first].append(idx)
 
 
 def token():
@@ -443,6 +459,16 @@ def chunk(lst):
         yield lst[idx : idx + KB_WIDTH]
 
 
+def sort_lines(line):
+    if line.isdigit():
+        return False, int(line)
+    return True, line
+
+
+def sort_cerc_lines(line):
+    return int(line[1:])
+
+
 def reformat(text):
     text = RE["line"].sub(r"<b>\1 \2</b>:", text)
     text = RE["dest"].sub(r"\1 <code>\2</code>", text)
@@ -630,7 +656,13 @@ def stopname_matches(transport, stopnames, inline=False):
             for index, stop in stops
             if normalize(word) in normalize(stop)
         ]
-    return [stop_data(transport, index, inline) for index, _ in stops]
+    if transport == "metro":
+        uniq = {stop: idx for idx, stop in stops}
+        return [
+            stop_data(transport, index, inline) for _, index in uniq.items()
+        ]
+    else:
+        return [stop_data(transport, index, inline) for index, _ in stops]
 
 
 def stopnumber_match(transport, stopnumber):
@@ -682,44 +714,18 @@ def update_data(context):
             "urb": None,
         },
         "idx": {
-            "metro": {"1": "Sentido Horario", "2": "Sentido Antihorario"},
             "cerc": {0: "salidas", 1: "llegadas"},
         },
         "proc": {
             "metro": {
-                "lines": {
-                    "1": {},
-                    "2": {},
-                    "3": {},
-                    "4": {},
-                    "5": {},
-                    "6": {},
-                    "7": {},
-                    "8": {},
-                    "9": {},
-                    "10": {},
-                    "11": {},
-                    "12": {},
-                    "R": {},
-                },
-                "ban": ["13", "14", "15"],
+                "lines": {},
                 "stops": {},
                 "index": {},
                 "names": [],
                 "ids": [],
             },
             "cerc": {
-                "lines": {
-                    "C1": {},
-                    "C2": {},
-                    "C3": {},
-                    "C4": {},
-                    "C5": {},
-                    "C7": {},
-                    "C8": {},
-                    "C9": {},
-                    "C10": {},
-                },
+                "lines": {},
                 "stops": {},
                 "index": {},
                 "names": [],
