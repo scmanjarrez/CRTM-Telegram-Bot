@@ -6,11 +6,11 @@
 import sqlite3 as sql
 from contextlib import closing
 
-DB = "crtm.db"
+import crtm.utils as ut
 
 
 def setup_db():
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.executescript(
                 """
@@ -39,7 +39,7 @@ def setup_db():
 
 
 def cached(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "SELECT EXISTS ("
@@ -53,21 +53,21 @@ def cached(uid):
 
 
 def add_user(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("INSERT INTO users (uid) VALUES (?)", [uid])
             db.commit()
 
 
 def del_user(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("DELETE FROM users WHERE uid = ?", [uid])
             db.commit()
 
 
 def favorites(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "SELECT type, stop_id, stop "
@@ -79,7 +79,7 @@ def favorites(uid):
 
 
 def favorite_cached(uid, transport, stop_id):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "SELECT EXISTS ("
@@ -93,7 +93,7 @@ def favorite_cached(uid, transport, stop_id):
 
 
 def add_favorite(uid, transport, stop_id, stop):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "INSERT OR IGNORE INTO transports (type) VALUES (?)",
@@ -109,7 +109,7 @@ def add_favorite(uid, transport, stop_id, stop):
 
 
 def rename_favorite(uid, transport, stop_id, stop):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "UPDATE favorites "
@@ -121,7 +121,7 @@ def rename_favorite(uid, transport, stop_id, stop):
 
 
 def del_favorite(uid, transport, stop_id):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "DELETE FROM favorites "
@@ -132,21 +132,21 @@ def del_favorite(uid, transport, stop_id):
 
 
 def card(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("SELECT card FROM users WHERE uid = ?", [uid])
             return cur.fetchone()[0]
 
 
 def save_card(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("SELECT save FROM users WHERE uid = ?", [uid])
             return cur.fetchone()[0]
 
 
 def toggle_card(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "UPDATE users SET save = NOT save WHERE uid = ?", [uid]
@@ -155,7 +155,7 @@ def toggle_card(uid):
 
 
 def add_card(uid, cardn):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
                 "UPDATE users SET card = ? WHERE uid = ?", [cardn, uid]
@@ -164,14 +164,14 @@ def add_card(uid, cardn):
 
 
 def del_card(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("UPDATE users SET card = NULL WHERE uid = ?", [uid])
             db.commit()
 
 
 def del_data(uid):
-    with closing(sql.connect(DB)) as db:
+    with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute("DELETE FROM favorites WHERE uid = ?", [uid])
             cur.execute("DELETE FROM users WHERE uid = ?", [uid])

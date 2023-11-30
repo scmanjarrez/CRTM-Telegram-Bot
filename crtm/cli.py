@@ -7,9 +7,10 @@
 
 import traceback
 
-import crtm_gui as gui
-import database as db
-import utils as ut
+import crtm.database as db
+
+import crtm.gui as gui
+import crtm.utils as ut
 from telegram.error import BadRequest
 
 

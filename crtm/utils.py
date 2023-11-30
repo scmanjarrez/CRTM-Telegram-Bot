@@ -13,10 +13,11 @@ import traceback
 import unicodedata
 from pathlib import Path
 
-import crtm_gui as gui
-import database as db
+import crtm.database as db
 
-import endpoints as end  # not uploaded for privacy reasons
+import crtm.endpoints as end  # not uploaded for privacy reasons
+
+import crtm.gui as gui
 import pytz
 import requests as req
 from bs4 import BeautifulSoup
@@ -52,14 +53,9 @@ CMD_TRANS = {
     "types": {"train": ("metro", "cerc"), "bus": ("emt", "urb")},
 }
 FILES = {
-<<<<<<< Updated upstream:utils.py
-    "cfg": ".config.json",
-    "token": ".token",
-=======
     "db": "config/crtm.db",
     "cfg": "config/config.json",
     "token": "config/token",
->>>>>>> Stashed changes:crtm/utils.py
     "metro": "data/metro.json",
     "cerc": "data/cercanias.json",
     "emt": "data/emt.json",
@@ -94,11 +90,7 @@ def api(key):
 def download_api_data():
     emt_path = Path(FILES["emt"])
     emt_path.parent.mkdir(exist_ok=True)
-    get = req.get(
-        f'{end.URL["cloud"]}{end.END["raw_emt"]}',
-        params={"a": "EMT", "t": 3},
-        headers=end.headers(),
-    )
+    get = end.download_emt()
     if get.status_code != 200:
         return
     data = parse_api_data(json.loads(get.text))
@@ -106,35 +98,11 @@ def download_api_data():
         json.dump(data, f, indent=4, ensure_ascii=False)
 
     urb_path = Path(FILES["urb"])
-    get = req.get(
-        f'{end.URL["cloud"]}{end.END["raw_urb"]}',
-        params={"a": "CRTM", "t": 3},
-        headers=end.headers(),
-    )
+    get = end.download_urb()
     if get.status_code != 200:
         return
     data = parse_api_data(json.loads(get.text))
     with urb_path.open("w") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
-
-    metro_path = Path(FILES["metro"])
-    get = req.get(
-        f'{end.URL["cloud"]}{end.END["raw_metro"]}',
-        params={"a": "CRTM", "t": 0},
-        headers=end.headers(),
-    )
-    if get.status_code != 200:
-        return
-    ml_data = parse_api_data(json.loads(get.text))
-    get = req.get(
-        f'{end.URL["cloud"]}{end.END["raw_metro"]}',
-        params={"a": "CRTM", "t": 1},
-        headers=end.headers(),
-    )
-    if get.status_code != 200:
-        return
-    data = parse_api_data(json.loads(get.text), ml_data)
-    with metro_path.open("w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
 
@@ -158,7 +126,7 @@ def parse_api_data(data, fill=None):
 
 
 def load_data():
-    download_api_data()
+    # download_api_data()
     with open(FILES["cerc"], "r") as f:
         DATA["raw"]["cerc"] = json.load(f)
     with open(FILES["metro"], "r") as f:
@@ -187,6 +155,25 @@ def train_lines():
             DATA["proc"]["cerc"]["lines"][line][first].append(idx)
 
 
+def metro_lines():
+    for idx, info in enumerate(
+        DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]
+    ):
+        DATA["proc"]["metro"]["index"][info["idweb"]] = idx
+        DATA["proc"]["metro"]["names"].append(info["name"])
+        DATA["proc"]["metro"]["ids"].append(info["idweb"])
+        first = info["name"][0]
+        if first not in DATA["proc"]["metro"]["stops"]:
+            DATA["proc"]["metro"]["stops"][first] = []
+        DATA["proc"]["metro"]["stops"][first].append(idx)
+        line_id = info["linea"]
+        if line_id not in DATA["proc"]["metro"]["lines"]:
+            DATA["proc"]["metro"]["lines"][line_id] = {}
+        if first not in DATA["proc"]["metro"]["lines"][line_id]:
+            DATA["proc"]["metro"]["lines"][line_id][first] = []
+        DATA["proc"]["metro"]["lines"][line_id][first].append(idx)
+
+
 def transport_lines(transport):
     for idx, (station, info) in enumerate(
         DATA["raw"][transport]["station"].items()
@@ -194,18 +181,6 @@ def transport_lines(transport):
         DATA["proc"][transport]["index"][station] = idx
         DATA["proc"][transport]["names"].append(info["name"])
         DATA["proc"][transport]["ids"].append(station)
-        if transport == "metro":
-            first = info["name"][0]
-            if first not in DATA["proc"][transport]["stops"]:
-                DATA["proc"][transport]["stops"][first] = []
-            DATA["proc"][transport]["stops"][first].append(idx)
-            for line in info["lineIds"]:
-                line_id = RE["metro"].match(line).group(1)
-                if line_id not in DATA["proc"][transport]["lines"]:
-                    DATA["proc"][transport]["lines"][line_id] = {}
-                if first not in DATA["proc"][transport]["lines"][line_id]:
-                    DATA["proc"][transport]["lines"][line_id][first] = []
-                DATA["proc"][transport]["lines"][line_id][first].append(idx)
 
 
 def token():
@@ -318,11 +293,7 @@ def weather():
 def card(uid, cardn=None):
     if cardn is None:
         cardn = db.card(uid)
-    get = req.get(
-        f'{end.URL["cloud"]}{end.END["card"]}',
-        params={"cardNumber": f"{cardn}"},
-        headers=end.headers(),
-    )
+    get = end.get_card(cardn)
     data = json.loads(get.text)
     recharge = False
     for dt in data["ctmTitles"]:
@@ -368,19 +339,7 @@ def _metro_time(ref_time, next_time):
 
 def cercanias(stop_id):
     try:
-        get = req.get(
-            end.URL["adif"],
-            params={
-                "station": stop_id,
-                "dest": "",
-                "date": "",
-                "previous": 1,
-                "showCercanias": "true",
-                "showOtros": "false",
-            },
-            headers=end.headers("adif"),
-            timeout=15,
-        )
+        get = end.get_cercanias(stop_id)
     except req.exceptions.ReadTimeout:
         return None
     else:
@@ -410,17 +369,40 @@ def cercanias(stop_id):
         return info
 
 
+def metro(stop_id):
+    try:
+        get = end.get_metro(stop_id)
+    except req.exceptions.ReadTimeout:
+        return None
+    else:
+        soup = BeautifulSoup(get.text, "lxml-xml")
+        data = soup.find_all("Vtelindicadores")
+        info = {}
+        for train in data:
+            line = train.find("linea")
+            if line is not None:
+                if line.text not in info:
+                    info[line.text] = {}
+                platform = train.find("anden").text
+                info[line.text][platform] = {
+                    "direction": train.find("sentido").text
+                }
+                next1 = train.find("proximo")
+                next2 = train.find("siguiente")
+                times = []
+                if next1 is not None and next1.text:
+                    times.append(next1.text)
+                if next2 is not None and next2.text:
+                    times.append(next2.text)
+                if not times:
+                    times.append("No disponible")
+                info[line.text][platform]["times"] = times
+        return info
+
+
 def real_time(transport, stop_id):
     try:
-        get = req.get(
-            f'{end.URL["cloud"]}{end.END[transport]}',
-            params={
-                "stopId": stop_id,
-                "type": 3 if transport != "metro" else 1,
-            },
-            headers=end.headers(),
-            timeout=15,
-        )
+        get = end.get_bus(transport, stop_id)
     except req.exceptions.ReadTimeout:
         return None
     else:
@@ -522,18 +504,19 @@ def text_card(uid, cardn=None):
 
 def text_metro(stop, stop_id):
     msg = [f"Tiempos en estación {stop}\n\n"]
-    data = real_time("metro", stop_id)
+    data = metro(stop_id)
     if data is not None:
         if data:
             for line in data:
                 msg.append(f"<b>Línea {line}:</b>\n")
-                for drct in data[line]:
+                for platf, info in data[line].items():
                     msg.append(
-                        f"- Destino: " f"<code>{drct['name']}</code>" f"\n"
+                        f"- Destino: <code>{info['direction']}</code>\n"
                     )
+                    msg.append(f"- Andén: <code>{platf}</code>\n")
                     msg.append(
                         f"- Tiempo(s): "
-                        f"<code>{', '.join(drct['times'])}"
+                        f"<code>{', '.join(info['times'])}"
                         f"</code>"
                         f"\n\n"
                     )
@@ -594,9 +577,7 @@ def text_bus(transport, stop, stop_id):
         if data:
             for line in data:
                 msg.append(f"<b>Línea {line}:</b>\n")
-                msg.append(
-                    f"- Destino: " f"<code>{data[line]['name']}</code>" f"\n"
-                )
+                msg.append(f"- Destino: <code>{data[line]['name']}</code>\n")
                 msg.append(
                     f"- Tiempo(s): "
                     f"<code>{', '.join(data[line]['times'])}"
@@ -743,7 +724,7 @@ def update_data(context):
     }
     load_data()
     train_lines()
-    transport_lines("metro")
+    metro_lines()
     transport_lines("emt")
     transport_lines("urb")
 

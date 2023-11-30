@@ -1,11 +1,11 @@
 APScheduler==3.6.3
-backports.zoneinfo==0.2.1;python_version<"3.9"
 beautifulsoup4==4.11.1
 bs4==0.0.1
 cachetools==4.2.2
 certifi==2023.7.22
 charset-normalizer==2.0.12
 idna==3.3
+lxml==4.9.3
 python-dateutil==2.8.2
 python-telegram-bot==13.12
 pytz==2022.1
@@ -13,7 +13,7 @@ pytz-deprecation-shim==0.1.0.post0
 requests==2.31.0
 six==1.16.0
 soupsieve==2.3.2.post1
-tornado==6.3.3
+tornado==6.3.2
 tzdata==2022.1
 tzlocal==4.2
-urllib3==1.26.18
+urllib3==1.26.9

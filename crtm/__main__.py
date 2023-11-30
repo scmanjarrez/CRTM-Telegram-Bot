@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # SPDX-License-Identifier: MIT
 
 # Copyright (c) 2022-2023 scmanjarrez. All rights reserved.
@@ -8,10 +6,10 @@
 import logging
 import os
 
-import crtm_cli as cli
-import crtm_gui as gui
-import database as db
-import utils as ut
+import crtm.cli as cli
+import crtm.database as db
+import crtm.gui as gui
+import crtm.utils as ut
 from telegram.ext import (
     CallbackQueryHandler,
     ChosenInlineResultHandler,

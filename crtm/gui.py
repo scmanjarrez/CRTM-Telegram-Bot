@@ -5,8 +5,8 @@
 # Copyright (c) 2022-2023 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
 
-import database as db
-import utils as ut
+import crtm.database as db
+import crtm.utils as ut
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
 
