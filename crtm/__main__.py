@@ -24,7 +24,9 @@ from telegram.ext import (
 def button_handler(update, context):
     query = update.callback_query
     if query.inline_message_id is not None:
-        cli.inline_text(update, context, query.inline_message_id, query.data)
+        cli.inline_text(
+            update, context, query.inline_message_id, query.data
+        )
     else:
         uid = ut.uid(update)
         if not db.cached(uid):
@@ -44,10 +46,14 @@ def button_handler(update, context):
                 gui.train_line_menu(update, args[-2], args[-1])
             elif query.data.startswith("station_menu"):
                 args = query.data.split("_")
-                gui.train_station_menu(update, args[-3], args[-2], args[-1])
+                gui.train_station_menu(
+                    update, args[-3], args[-2], args[-1]
+                )
             elif query.data.startswith("time_train"):
                 args = query.data.split("_")
-                gui.train_time(update, args[-4], args[-3], args[-2], args[-1])
+                gui.train_time(
+                    update, args[-4], args[-3], args[-2], args[-1]
+                )
             elif query.data.startswith("bus_menu"):
                 args = query.data.split("_")
                 gui.bus_menu(update, args[-1])
@@ -95,9 +101,16 @@ def setup_handlers(dispatch, job_queue):
     dispatch.add_handler(card_handler)
 
     save_handler = CommandHandler(
-        "guardar_abono", cli.save_card, filters=~Filters.update.edited_message
+        "guardar_abono",
+        cli.save_card,
+        filters=~Filters.update.edited_message,
     )
     dispatch.add_handler(save_handler)
+
+    bici_handler = CommandHandler(
+        "bici", cli.times, filters=~Filters.update.edited_message
+    )
+    dispatch.add_handler(bici_handler)
 
     metro_handler = CommandHandler(
         "metro", cli.times, filters=~Filters.update.edited_message
@@ -115,17 +128,23 @@ def setup_handlers(dispatch, job_queue):
     dispatch.add_handler(emt_handler)
 
     urb_handler = CommandHandler(
-        "interurbano", cli.times, filters=~Filters.update.edited_message
+        "interurbano",
+        cli.times,
+        filters=~Filters.update.edited_message,
     )
     dispatch.add_handler(urb_handler)
 
     fav_handler = CommandHandler(
-        "favoritos", cli.favorites, filters=~Filters.update.edited_message
+        "favoritos",
+        cli.favorites,
+        filters=~Filters.update.edited_message,
     )
     dispatch.add_handler(fav_handler)
 
     rename_handler = CommandHandler(
-        "renombrar", cli.rename, filters=~Filters.update.edited_message
+        "renombrar",
+        cli.rename,
+        filters=~Filters.update.edited_message,
     )
     dispatch.add_handler(rename_handler)
 
@@ -158,12 +177,16 @@ def setup_handlers(dispatch, job_queue):
 
     dispatcher.add_handler(InlineQueryHandler(cli.inline_query))
 
-    dispatcher.add_handler(ChosenInlineResultHandler(cli.inline_message))
+    dispatcher.add_handler(
+        ChosenInlineResultHandler(cli.inline_message)
+    )
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format=("%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
+        format=(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        ),
         level=logging.INFO,
     )
 
@@ -172,6 +195,7 @@ if __name__ == "__main__":
         ut.load_config()
 
         updater = Updater(token=ut.setting("token"), use_context=True)
+        updater.bot.set_my_commands(cli.HELP_CMD.items())
         dispatcher = updater.dispatcher
         setup_handlers(dispatcher, updater.job_queue)
 

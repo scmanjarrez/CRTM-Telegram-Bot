@@ -11,6 +11,7 @@
   "api": {
     "cloud": "XXXXXXXXXXXXXXXXXX",
     "metro": "XXXXXXXXXXXXXXXXXX",
+    "bici": "XXXXXXXXXXXXXXXXXX",
     "adif": "XXXXXXXXXXXXXXXXXX"
   }
 }

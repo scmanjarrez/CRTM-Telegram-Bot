@@ -149,7 +149,8 @@ def toggle_card(uid):
     with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
-                "UPDATE users SET save = NOT save WHERE uid = ?", [uid]
+                "UPDATE users SET save = NOT save WHERE uid = ?",
+                [uid],
             )
             db.commit()
 
@@ -158,7 +159,8 @@ def add_card(uid, cardn):
     with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
-                "UPDATE users SET card = ? WHERE uid = ?", [cardn, uid]
+                "UPDATE users SET card = ? WHERE uid = ?",
+                [cardn, uid],
             )
             db.commit()
 
@@ -166,7 +168,9 @@ def add_card(uid, cardn):
 def del_card(uid):
     with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
-            cur.execute("UPDATE users SET card = NULL WHERE uid = ?", [uid])
+            cur.execute(
+                "UPDATE users SET card = NULL WHERE uid = ?", [uid]
+            )
             db.commit()
 
 
