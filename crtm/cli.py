@@ -8,56 +8,58 @@
 import traceback
 
 import crtm.database as db
-
 import crtm.gui as gui
 import crtm.utils as ut
 from telegram.error import BadRequest
 
 
+HELP_CMD = {
+    "start": "Inicia el bot (obligatorio la primera vez)",
+    "menu": "Menú interactivo",
+    "tiempo": "Información sobre el tiempo",
+    "abono": "Información sobre el abono transporte",
+    "guardar": "Activa/desactiva el guardado del abono en la base de datos",
+    "bici": "Estadísticas de la estación de bicimad",
+    "metro": "Tiempos de la estación de metro",
+    "cercanias": "Tiempos de la estación de cercanías",
+    "emt": "Tiempos de la parada de autobuses",
+    "interurbano": "Tiempos de la parada de interurbano",
+    "favoritos": "Lista de favoritos",
+    "renombrar": "Renombrar un favorito",
+    "ayuda": "Lista de comandos",
+    "sugerir": "Enviar una sugerencia",
+    "donar": "Hacer un donativo (ko-fi)",
+    "borrar": "Elimina toda la información sobre ti",
+}
+
 HELP = (
-    "Esto es lo que puedo hacer por ti:"
-    "\n\n"
-    "❔ /menu - Interactúa con el bot mediante botones."
-    "\n\n"
-    "❔ /tiempo - Información sobre el tiempo."
-    "\n"
-    "❔ /abono <code>&lt;número&gt;</code> - Información sobre el abono "
-    "transporte. Elimínalo enviando -1."
-    "\n"
-    "❔ /guardar_abono - Activa/desactiva el guardado del abono en la "
-    "base de datos. Desactivado por defecto."
-    "\n\n"
-    "❔ /metro <code>&lt;nombre&gt;</code> - Tiempos de la estación "
-    "de metro."
-    "\n"
-    "❔ /cercanias <code>&lt;nombre&gt;</code> - Tiempos de la estación "
-    "de cercanías."
-    "\n"
-    "❔ /emt <code>&lt;nombre/número&gt;</code> - Tiempos de la parada "
-    "de autobuses (EMT)."
-    "\n"
-    "❔ /interurbano <code>&lt;nombre/número&gt;</code> - Tiempos de la "
-    "parada de autobuses (Interurbano)."
-    "\n\n"
-    "❔ /favoritos - Lista de favoritos."
-    "\n"
-    "❔ /renombrar - Renombrar un favorito."
-    "\n\n"
-    "❔ /ayuda - Lista de comandos."
-    "\n"
-    "❔ /sugerir - Enviar una sugerencia."
-    "\n"
-    "❔ /donar - Hacer un donativo (ko-fi)."
-    "\n"
-    "❔ /borrar - Elimina la información relacionada con tu cuenta."
-    "\n\n"
-    "❕ <b>Nota:</b> No es necesario dar el nombre completo, "
-    "dame una parte y te sugeriré coincidencias.\n\n"
-    ""
-    "❕ <b>Nota2:</b> Si no deseas usar interactuar con el bot, también "
-    "puedes usarme en modo inline de esta forma:\n@crtmadrid_bot "
-    "<code>[metro|cercanias|emt|interurbano]</code> "
-    "<code>[nombre|número]</code>."
+    f"Esto es lo que puedo hacer por ti:\n\n"
+    f"❔ /menu - {HELP_CMD['menu']}\n\n"
+    f"❔ /tiempo - {HELP_CMD['tiempo']}\n"
+    f"❔ /abono <code>&lt;número&gt;</code> - {HELP_CMD['abono']}. "
+    f"Elimínalo enviando -1\n"
+    f"❔ /guardar - {HELP_CMD['guardar']}. "
+    f"Desactivado por defecto\n\n"
+    f"❔ /bici <code>&lt;nombre/número&gt;</code> - {HELP_CMD['bici']}\n"
+    f"❔ /metro <code>&lt;nombre&gt;</code> - {HELP_CMD['metro']}\n"
+    f"❔ /cercanias <code>&lt;nombre&gt;</code> - {HELP_CMD['cercanias']}\n"
+    f"❔ /emt <code>&lt;nombre/número&gt;</code> - {HELP_CMD['emt']}\n"
+    f"❔ /interurbano <code>&lt;nombre/número&gt;</code> - "
+    f"{HELP_CMD['interurbano']}\n"
+    f"❕ <b>Nota:</b> Sólo debes dar una parte del nombre y "
+    f"te sugeriré coincidencias.\n\n"
+    f"❔ /favoritos - {HELP_CMD['favoritos']}\n"
+    f"❔ /renombrar - {HELP_CMD['renombrar']}\n\n"
+    f"❔ /start - {HELP_CMD['start']}\n"
+    f"❔ /ayuda - {HELP_CMD['ayuda']}\n"
+    f"❔ /sugerir - {HELP_CMD['sugerir']}\n"
+    f"❔ /donar - {HELP_CMD['donar']}\n"
+    f"❔ /borrar - {HELP_CMD['borrar']}\n"
+    f"❕ <b>Nota:</b> También puedes usarme en modo inline de esta forma: "
+    f"@crtmadrid_bot <code>transporte</code> <code>texto</code>.\n"
+    f"- <b>transporte</b>: puede ser bici, metro, cercanias, emt o interurbano\n"
+    f"- <b>texto</b>: puede ser un nombre o número de parada en caso de "
+    f"bici, emt o interubano"
 )
 
 
@@ -129,13 +131,16 @@ def times(update, context):
             msg = f"{msg}.\n\n<b>Ejemplo</b>:\n- /metro <code>príncipe</code>"
             cmd = cmd[1:]
         elif cmd == "/cercanias":
-            msg = (
-                f"{msg}.\n\n<b>Ejemplo</b>:\n- /cercanias <code>atocha"
-                f"</code>"
-            )
+            msg = f"{msg}.\n\n<b>Ejemplo</b>:\n- /cercanias <code>atocha</code>"
             cmd = "cerc"
         else:
-            if cmd == "/emt":
+            if cmd == "/bici":
+                msg = (
+                    f"{msg} o número.\n\n<b>Ejemplos</b>:\n- /bici "
+                    f"<code>casal</code>\n- /bici <code>77</code>"
+                )
+                cmd = cmd[1:]
+            elif cmd == "/emt":
                 msg = (
                     f"{msg} o número.\n\n<b>Ejemplos</b>:\n- /emt "
                     f"<code>aluche</code>\n- /emt <code>658</code>"
@@ -149,7 +154,9 @@ def times(update, context):
                 )
                 cmd = "urb"
             if context.args and ut.is_int(context.args[0]):
-                match, index = ut.stopnumber_match(cmd, context.args[0])
+                match, index = ut.stopnumber_match(
+                    cmd, context.args[0]
+                )
                 if match:
                     gui.bus_time(update, cmd, index)
                     return
@@ -218,10 +225,13 @@ def text(update, context):
         if uid in ut.STATE:
             if ut.STATE[uid][0] == "suggest":
                 ut.store_suggestion(update.message.text)
-                ut.send(update, "He tomado nota de la sugerencia. Gracias.")
+                ut.send(
+                    update,
+                    "He tomado nota de la sugerencia. Gracias.",
+                )
             else:
                 transport, index = ut.STATE[uid][1]
-                stop_id, stop = ut.transport_info(transport, index)
+                stop, stop_id = ut.transport_info(transport, index)
                 db.rename_favorite(
                     uid, transport, stop_id, update.message.text
                 )
@@ -257,7 +267,9 @@ def inline_text(update, context, msg_id, callback_data):
             "".join(msg),
             inline_message_id=msg_id,
             parse_mode=ut.ParseMode.HTML,
-            reply_markup=gui.markup([("🔃 Actualizar 🔃", callback_data)]),
+            reply_markup=gui.markup(
+                [("🔃 Actualizar 🔃", callback_data)]
+            ),
         )
     except BadRequest as br:
         if not str(br).startswith("Message is not modified:"):
@@ -271,7 +283,9 @@ def inline_text(update, context, msg_id, callback_data):
 
 def inline_message(update, context):
     chosen = update.chosen_inline_result
-    inline_text(update, context, chosen.inline_message_id, chosen.result_id)
+    inline_text(
+        update, context, chosen.inline_message_id, chosen.result_id
+    )
 
 
 def inline_query(update, context):
@@ -284,11 +298,16 @@ def inline_query(update, context):
     if len(args) > 1:
         if cmd in ut.CMD_TRANS:
             transport, stype = ut.CMD_TRANS[cmd]
-            msg = f"tiempos en {stype}"
+            if transport == "bici":
+                msg = f"estadísticas de {stype}"
+            else:
+                msg = f"tiempos en {stype}"
             if ut.is_bus(transport) and ut.is_int(args[1]):
                 match, index = ut.stopnumber_match(transport, args[1])
                 if match:
-                    stop_id, stop = ut.transport_info(transport, index)
+                    stop, stop_id = ut.transport_info(
+                        transport, index
+                    )
                     stop_id = stop_id.split("_")[-1]
                     results.append(
                         ut.result(
@@ -298,10 +317,14 @@ def inline_query(update, context):
                         )
                     )
             else:
-                matches = ut.stopname_matches(transport, args[1:], inline=True)
+                matches = ut.stopname_matches(
+                    transport, args[1:], inline=True
+                )
                 for match in matches:
                     results.append(
-                        ut.result(transport, match[1], f"{msg} {match[0]}")
+                        ut.result(
+                            transport, match[1], f"{msg} {match[0]}"
+                        )
                     )
         else:
             return

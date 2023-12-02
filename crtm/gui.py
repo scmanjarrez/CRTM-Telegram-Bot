@@ -14,8 +14,8 @@ from telegram.error import BadRequest
 CARD = (
     "Es necesario que me indiques un número.\n\n"
     "<b>Ejemplo</b>:\n- /abono <code>0010000000</code>\n\n"
-    "<b>Nota</b>: <code>&lt;número&gt;</code> se compone por los "
-    "3 últimos dígitos de la primera fila y los dígitos de la "
+    "<b>Nota</b>: El número se compone por los "
+    "3 últimos dígitos de la primera fila y los de la "
     "segunda fila."
 )
 
@@ -29,7 +29,10 @@ def _answer(update, msg=None):
 
 
 def button(buttons):
-    return [InlineKeyboardButton(bt[0], callback_data=bt[1]) for bt in buttons]
+    return [
+        InlineKeyboardButton(bt[0], callback_data=bt[1])
+        for bt in buttons
+    ]
 
 
 def button_url(buttons):
@@ -40,7 +43,11 @@ def markup(buttons):
     if buttons:
         return InlineKeyboardMarkup(
             [
-                [InlineKeyboardButton(stop, callback_data=callback_data)]
+                [
+                    InlineKeyboardButton(
+                        stop, callback_data=callback_data
+                    )
+                ]
                 for stop, callback_data in buttons
             ]
         )
@@ -49,7 +56,13 @@ def markup(buttons):
 def main_menu(update):
     _answer(update)
     kb = [
-        button([("🌤 Tiempo 🌤", "weather_menu"), ("💳 Abono 💳", "card_menu")]),
+        button([("🌤 Tiempo 🌤", "weather_menu")]),
+        button(
+            [
+                ("💳 Abono 💳", "card_menu"),
+                ("🚲 bicimad 🚲", "bus_menu_bici"),
+            ]
+        ),
         button(
             [
                 ("🚇 Metro 🚇", "train_menu_metro"),
@@ -57,7 +70,10 @@ def main_menu(update):
             ]
         ),
         button(
-            [("🚎 EMT 🚎", "bus_menu_emt"), ("🚌 Interurbano 🚌", "bus_menu_urb")]
+            [
+                ("🚎 EMT 🚎", "bus_menu_emt"),
+                ("🚌 Interurbano 🚌", "bus_menu_urb"),
+            ]
         ),
         button([("❤️ Favoritos ❤️", "favorites_menu")]),
     ]
@@ -89,7 +105,7 @@ def card_menu(update):
     _answer(update)
     if db.card(uid) is not None:
         msg = ut.text_card(uid)
-        kb.append(button([("🔃 Actualizar 🔃", "card_menu")])),
+        kb.append(button([("🔃 Actualizar 🔃", "card_menu")]))
     kb.append(button([("« Menú", "main_menu")]))
     resp = ut.send
     if update.callback_query is not None:
@@ -107,7 +123,12 @@ def train_menu(update, transport):
         sort_fn = ut.sort_cerc_lines
     for lines in list(ut.chunk(sorted(keys, key=sort_fn))):
         kb.append(
-            button([(line, f"line_menu_{transport}_{line}") for line in lines])
+            button(
+                [
+                    (line, f"line_menu_{transport}_{line}")
+                    for line in lines
+                ]
+            )
         )
     kb.append(button([("A-Z", f"line_menu_{transport}_A-Z")]))
     kb.append(button([("« Menú", "main_menu")]))
@@ -117,14 +138,20 @@ def train_menu(update, transport):
     transl = "Metro"
     if transport == "cerc":
         transl = "Cercanías"
-    resp(update, f"Líneas de {transl}", reply_markup=InlineKeyboardMarkup(kb))
+    resp(
+        update,
+        f"Líneas de {transl}",
+        reply_markup=InlineKeyboardMarkup(kb),
+    )
 
 
 # line_menu_<transport>_<line> -> station_menu_<transport>_<line>_<letter>
 def train_line_menu(update, transport, line):
     _answer(update)
     if line == "A-Z":
-        keys = sorted(list(ut.DATA["proc"][transport]["stops"].keys()))
+        keys = sorted(
+            list(ut.DATA["proc"][transport]["stops"].keys())
+        )
     else:
         keys = list(ut.DATA["proc"][transport]["lines"][line].keys())
     kb = []
@@ -132,14 +159,20 @@ def train_line_menu(update, transport, line):
         kb.append(
             button(
                 [
-                    (letter, f"station_menu_{transport}_{line}_{letter}")
+                    (
+                        letter,
+                        f"station_menu_{transport}_{line}_{letter}",
+                    )
                     for letter in letters
                 ]
             )
         )
     kb.append(
         button(
-            [("« Líneas", f"train_menu_{transport}"), ("« Menú", "main_menu")]
+            [
+                ("« Líneas", f"train_menu_{transport}"),
+                ("« Menú", "main_menu"),
+            ]
         )
     )
     resp = ut.send
@@ -163,10 +196,12 @@ def train_station_menu(update, transport, line, letter):
     kb = []
     stations = {}
     for idx in idxs:
-        _, stop = ut.transport_info(transport, idx)
+        stop, _ = ut.transport_info(transport, idx)
         stations[stop] = idx
     kb = [
-        button([(stop, f"time_train_{transport}_{line}_{letter}_{idx}")])
+        button(
+            [(stop, f"time_train_{transport}_{line}_{letter}_{idx}")]
+        )
         for stop, idx in sorted(stations.items())
     ]
     kb.append(
@@ -193,11 +228,16 @@ def train_time(update, transport, line, letter, index):
     kb = []
     msg, stop_id = ut.text_transport(transport, index)
     _answer(update)
-    add_upd_button(kb, f"time_train_{transport}_{line}_{letter}_{index}")
+    add_upd_button(
+        kb, f"time_train_{transport}_{line}_{letter}_{index}"
+    )
     kb.append(
         button(
             [
-                ("« Estaciones", f"station_menu_{transport}_{line}_{letter}"),
+                (
+                    "« Estaciones",
+                    f"station_menu_{transport}_{line}_{letter}",
+                ),
                 (f"« Línea {line}", f"line_menu_{transport}_{line}"),
                 ("« Líneas", f"train_menu_{transport}"),
                 ("« Menú", "main_menu"),
@@ -235,8 +275,14 @@ def bus_menu(update, transport):
     _answer(update)
     kb = []
     kb.append(button([("« Menú", "main_menu")]))
-    msg = "Envía el nombre de la parada o el número al comando"
-    if transport == "emt":
+    msg = "Envía el nombre o número de la parada al comando"
+    if transport == "bici":
+        msg = (
+            f"Envía el nombre o número de la parada al comando /bici.\n\n"
+            f"<b>Ejemplos</b>:\n- /bici <code>casal</code>\n"
+            f"- /bici <code>77</code>"
+        )
+    elif transport == "emt":
         msg = (
             f"{msg} /emt.\n\n"
             f"<b>Ejemplos</b>:\n- /emt <code>aluche</code>\n"
@@ -292,7 +338,12 @@ def favorites_menu(update):
             index = ut.index(transport, stop_id)
             kb.append(
                 button(
-                    [(f"{transport}: {stop}", f"time_fav_{transport}_{index}")]
+                    [
+                        (
+                            f"{transport}: {stop}",
+                            f"time_fav_{transport}_{index}",
+                        )
+                    ]
                 )
             )
     kb.append(button([("« Menú", "main_menu")]))
@@ -304,7 +355,7 @@ def favorites_menu(update):
 
 # fav_<uid>_<transport>_<index>
 def add_favorite(update, uid, transport, index):
-    stop_id, stop = ut.transport_info(transport, index)
+    stop, stop_id = ut.transport_info(transport, index)
     db.add_favorite(uid, transport, stop_id, stop)
     message = update.callback_query.message
     if transport == "metro":
@@ -324,7 +375,7 @@ def add_favorite(update, uid, transport, index):
 
 # unfav_<uid>_<transport>_<index>
 def del_favorite(update, uid, transport, index):
-    stop_id, _ = ut.transport_info(transport, index)
+    _, stop_id = ut.transport_info(transport, index)
     db.del_favorite(uid, transport, stop_id)
     favorites_menu(update)
 
@@ -336,12 +387,22 @@ def time_favorite_menu(update, transport, index):
     _answer(update)
     add_upd_button(kb, f"time_fav_{transport}_{index}")
     kb.append(
-        button([("« Favoritos", "favorites_menu"), ("« Menú", "main_menu")])
+        button(
+            [
+                ("« Favoritos", "favorites_menu"),
+                ("« Menú", "main_menu"),
+            ]
+        )
     )
     uid = ut.uid(update)
     kb.append(
         button(
-            [("💔 Eliminar de Favoritos 💔", f"unfav_{uid}_{transport}_{index}")]
+            [
+                (
+                    "💔 Eliminar de Favoritos 💔",
+                    f"unfav_{uid}_{transport}_{index}",
+                )
+            ]
         )
     )
     resp = ut.send
