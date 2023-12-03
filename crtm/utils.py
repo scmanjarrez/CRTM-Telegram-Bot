@@ -189,13 +189,45 @@ def train_lines():
             DATA["proc"]["cerc"]["lines"][line][first].append(idx)
 
 
+def metro_ids():
+    stations = {}
+    for st in DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]:
+        name = st["name"]
+        if name not in stations:
+            stations[name] = {"idweb": set(), "cnt": 0}
+        stations[name]["cnt"] += 1
+        if "idMatriz" in st:
+            if "idmatrix" not in stations[name]:
+                stations[name]["idmatrix"] = set()
+            stations[name]["idmatrix"].add(st["idMatriz"])
+        stations[name]["idweb"].add(st["idweb"])
+        if "idOcupacion" in st:
+            if "idocup" not in stations[name]:
+                stations[name]["idocup"] = []
+            stations[name]["idocup"].append(st["idOcupacion"])
+    staids = {}
+    for k, v in stations.items():
+        staid = list(v["idweb"])[0]
+        if v["cnt"] > 1:
+            if "idmatrix" in v:
+                staid = list(v["idmatrix"])[0]
+        else:
+            if "idocup" in v:
+                staid = v["idocup"][0]
+        staids[k] = staid
+    return staids
+
+
 def metro_lines():
+    staids = metro_ids()
+    stations = {}
     for idx, info in enumerate(
         DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]
     ):
-        DATA["proc"]["metro"]["index"][info["idweb"]] = idx
+        staid = staids[info["name"]]
+        DATA["proc"]["metro"]["index"][staid] = idx
         DATA["proc"]["metro"]["names"].append(info["name"])
-        DATA["proc"]["metro"]["ids"].append(info["idweb"])
+        DATA["proc"]["metro"]["ids"].append(staid)
         first = info["name"][0]
         if first not in DATA["proc"]["metro"]["stops"]:
             DATA["proc"]["metro"]["stops"][first] = []
