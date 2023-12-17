@@ -31,7 +31,6 @@ HELP_CMD = {
     "donar": "Hacer un donativo (ko-fi)",
     "borrar": "Elimina toda la información sobre ti",
 }
-
 HELP = (
     f"Esto es lo que puedo hacer por ti:\n\n"
     f"❔ /menu - {HELP_CMD['menu']}\n\n"

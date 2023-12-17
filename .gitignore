@@ -1,5 +1,6 @@
 data/
 raw/
+temp/
 endpoints.py
 config/token
 config/config.json
