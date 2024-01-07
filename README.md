@@ -40,7 +40,7 @@ Source code of [@crtmadrid\_bot](https://t.me/crtmadrid_bot).
     > superuser (**sudo**).
 
 # License
-    Copyright (c) 2022-2023 scmanjarrez. All rights reserved.
+    Copyright (c) 2022-2024 scmanjarrez. All rights reserved.
     This work is licensed under the terms of the MIT license.
 
 For a copy, see
