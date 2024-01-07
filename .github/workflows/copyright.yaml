@@ -33,7 +33,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commitTitle: Copyright year update
           prTitle: Copyright year update
-          path: "*.py"
+          path: "crtm/*.py"
 
       - name: Merge pull request
         env:
