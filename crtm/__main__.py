@@ -95,10 +95,10 @@ def setup_handlers(dispatch, job_queue):
     )
     dispatch.add_handler(weather_handler)
 
-    card_handler = CommandHandler(
-        "abono", cli.card, filters=~Filters.update.edited_message
-    )
-    dispatch.add_handler(card_handler)
+    # card_handler = CommandHandler(
+    #     "abono", cli.card, filters=~Filters.update.edited_message
+    # )
+    # dispatch.add_handler(card_handler)
 
     save_handler = CommandHandler(
         "guardar",

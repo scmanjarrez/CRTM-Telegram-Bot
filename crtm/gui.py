@@ -59,7 +59,7 @@ def main_menu(update):
         button([("🌤 Tiempo 🌤", "weather_menu")]),
         button(
             [
-                ("💳 Abono 💳", "card_menu"),
+                # ("💳 Abono 💳", "card_menu"),
                 ("🚲 bicimad 🚲", "bus_menu_bici"),
             ]
         ),

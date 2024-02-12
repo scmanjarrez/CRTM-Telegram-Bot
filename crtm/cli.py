@@ -17,7 +17,7 @@ HELP_CMD = {
     "start": "Inicia el bot (obligatorio la primera vez)",
     "menu": "Menú interactivo",
     "tiempo": "Información sobre el tiempo",
-    "abono": "Información sobre el abono transporte",
+    # "abono": "Información sobre el abono transporte",
     "guardar": "Activa/desactiva el guardado del abono en la base de datos",
     "bici": "Estadísticas de la estación de bicimad",
     "metro": "Tiempos de la estación de metro",
@@ -35,8 +35,8 @@ HELP = (
     f"Esto es lo que puedo hacer por ti:\n\n"
     f"❔ /menu - {HELP_CMD['menu']}\n\n"
     f"❔ /tiempo - {HELP_CMD['tiempo']}\n"
-    f"❔ /abono <code>&lt;número&gt;</code> - {HELP_CMD['abono']}. "
-    f"Elimínalo enviando -1\n"
+    # f"❔ /abono <code>&lt;número&gt;</code> - {HELP_CMD['abono']}. "
+    # f"Elimínalo enviando -1\n"
     f"❔ /guardar - {HELP_CMD['guardar']}. "
     f"Desactivado por defecto\n\n"
     f"❔ /bici <code>&lt;nombre/número&gt;</code> - {HELP_CMD['bici']}\n"
