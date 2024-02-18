@@ -14,7 +14,7 @@ from datetime import datetime, time
 from pathlib import Path
 
 import crtm.database as db
-import crtm.endpoints as end  # not uploaded for privacy reasons
+import crtm.private.endpoints as end  # not uploaded for privacy reasons
 import crtm.gui as gui
 import pytz
 import requests as req
@@ -52,6 +52,7 @@ FILES = {
     "db": "config/crtm.db",
     "cfg": "config/config.json",
     "token": "config/token",
+    "bici_token": "config/bici_token",
     "bici": "data/bicimad.json",
     "metro": "data/metro.json",
     "cerc": "data/cercanias.json",
@@ -852,6 +853,7 @@ def update_data(context):
     DATA = {
         "cfg": None,
         "token": None,
+        "bici_token": None,
         "raw": {
             "bici": None,
             "metro": None,

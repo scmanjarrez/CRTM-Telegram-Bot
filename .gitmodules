@@ -1,0 +1,3 @@
+[submodule "crtm/private"]
+	path = crtm/private
+	url = git@github.com:scmanjarrez/CRTM-Telegram-Bot-Private.git
