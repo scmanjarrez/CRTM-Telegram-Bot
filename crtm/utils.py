@@ -73,8 +73,8 @@ CONFIG = {}
 DATA = {}
 
 
-def _debug_request(req):
-    print(req.request.url, req.request.body, req.request.headers)
+# def _debug_request(req):
+#     print(req.request.url, req.request.body, req.request.headers)
 
 
 def load_config():
@@ -150,7 +150,7 @@ def parse_bici_data(data):
 
 
 def load_data():
-    download_api_data()
+    # download_api_data()
     with open(FILES["bici"], "r") as f:
         DATA["raw"]["bici"] = json.load(f)
     with open(FILES["cerc"], "r") as f:
@@ -221,7 +221,6 @@ def metro_ids():
 
 def metro_lines():
     staids = metro_ids()
-    stations = {}
     for idx, info in enumerate(
         DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]
     ):
@@ -303,27 +302,20 @@ def edit(update, msg, reply_markup, disable_preview=True):
             traceback.print_stack()
 
 
-def _msg_start(update):
-    return (
-        "Es necesario iniciar el bot con /start antes de continuar."
-    )
-
-
 def not_started(update):
-    msg = _msg_start(update)
-    send(update, msg)
+    send(update, "Es necesario iniciar el bot con /start antes de continuar.")
 
 
 def not_started_gui(update):
-    msg = _msg_start(update)
-    edit(update, msg, None)
+    edit(update, "Es necesario iniciar el bot con /start antes de continuar.", None)
 
 
 def weather_info(data):
     res = {
         "summ": data["summary"],
         "hum": f"{round(data['humidity'])}",
-        "rain": f"{round(data['precipProbability']*100)}",
+        "rain": ("0" if data["precipProbability"] is None
+                 else round(data['precipProbability']*100)),
     }
     if "temperature" in data:
         res["temp"] = f"{data['temperature']:.1f}"
@@ -365,46 +357,6 @@ def weather():
     return info
 
 
-def card(uid, cardn=None):
-    if cardn is None:
-        cardn = db.card(uid)
-    get = end.get_card(cardn)
-    data = get.json()
-    recharge = False
-    for dt in data["ctmTitles"]:
-        if dt["num"] == "1":
-            if "data" not in dt and "carga" not in dt:
-                return None
-            cardinfo = dt["data"]
-            if "recarga" in dt:
-                cardcharge = dt["recarga"]["data"]
-                recharge = True
-            else:
-                cardcharge = dt["carga"]["data"]
-            if db.save_card(uid):
-                db.add_card(uid, cardn)
-    info = {}
-    for ci in cardinfo:
-        if ci["name"] == "ContractName":
-            info["type"] = ci["value"]
-    tags = {
-        "firstl_date": ("ChargeFirstUseDate", "RechargeFirstUseDate"),
-        "first_date": (
-            "AccessEventInFirstPayDateCe",
-            "AccessEventInFirstPayDateRrge",
-        ),
-        "last_date": ("ChargeEndDate", "RechargeEndDate"),
-    }
-    idx = 0
-    if recharge:
-        idx = 1
-    for cc in cardcharge:
-        for tag in tags:
-            if cc["name"] == tags[tag][idx]:
-                info[tag] = cc["value"]
-    return info
-
-
 def bici(stop_id):
     try:
         get = end.get_bici(stop_id)
@@ -412,15 +364,6 @@ def bici(stop_id):
         return None
     else:
         return get.json()
-
-
-def _metro_time(ref_time, next_time):
-    next = (
-        ps.parse(next_time) - ps.parse(ref_time)
-    ).seconds // 60 - 1
-    if next < 1:
-        next = "Llegando"
-    return str(next)
 
 
 def cercanias(stop_id):
@@ -580,36 +523,18 @@ def text_weather():
         f"</code>\n",
     ]
     msg.append("\n<b>Clima en las próximas horas</b>\n")
-    for hour in data["hours"][1:9]:
+    for hour in data["hours"][0:9]:
         msg.append(
             f"- {hour['hour']}, <code>{hour['summ']} "
             f"({hour['temp']}ºC, {hour['hum']}%, "
             f"{hour['rain']}%)</code>\n"
         )
     msg.append("\n<b>Clima en los próximos días</b>\n")
-    for day in data["days"][1:9]:
+    for day in data["days"][0:9]:
         msg.append(
             f"- {day['day']}, <code>{day['summ']} "
             f"({day['tempmin']}-{day['tempmax']}ºC, "
             f"{day['hum']}%, {day['rain']}%)</code>\n"
-        )
-    return msg
-
-
-def text_card(uid, cardn=None):
-    data = card(uid, cardn)
-    msg = "Número de tarjeta inválido"
-    if data is not None:
-        msg = (
-            f"- <b>Tarjeta</b>: <code>{data['type']}</code>\n"
-            f"- <b>Fecha límite primer uso</b>: "
-            f"<code>{data['firstl_date']}</code>\n"
-            f"- <b>Primer uso</b>: "
-            f"<code>{data['first_date']}</code>\n"
-            f"- <b>Caducidad</b>: "
-            f"<code>{data['last_date']}</code>\n\n"
-            f"<b>Nota</b>: La validez de la carga se extenderá "
-            f"hasta las 5 AM del día siguiente."
         )
     return msg
 
@@ -848,7 +773,7 @@ def is_bus(transport):
     return transport in CMD_TRANS["type_bus"]
 
 
-def update_data(context):
+def update_data(_):
     global DATA
     DATA = {
         "cfg": None,

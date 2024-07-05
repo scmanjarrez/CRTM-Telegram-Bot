@@ -11,15 +11,6 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
 
 
-CARD = (
-    "Es necesario que me indiques un número.\n\n"
-    "<b>Ejemplo</b>:\n- /abono <code>0010000000</code>\n\n"
-    "<b>Nota</b>: El número se compone por los "
-    "3 últimos dígitos de la primera fila y los de la "
-    "segunda fila."
-)
-
-
 def _answer(update, msg=None):
     if update.callback_query is not None:
         try:
@@ -56,10 +47,9 @@ def markup(buttons):
 def main_menu(update):
     _answer(update)
     kb = [
-        button([("🌤 Tiempo 🌤", "weather_menu")]),
         button(
             [
-                # ("💳 Abono 💳", "card_menu"),
+                ("🌤 Tiempo 🌤", "weather_menu"),
                 ("🚲 bicimad 🚲", "bus_menu_bici"),
             ]
         ),
@@ -91,22 +81,6 @@ def weather_menu(update):
         button([("🔃 Actualizar 🔃", "weather_menu")]),
         button([("« Menú", "main_menu")]),
     ]
-    resp = ut.send
-    if update.callback_query is not None:
-        resp = ut.edit
-    resp(update, "".join(msg), reply_markup=InlineKeyboardMarkup(kb))
-
-
-# card_menu
-def card_menu(update):
-    uid = ut.uid(update)
-    msg = CARD
-    kb = []
-    _answer(update)
-    if db.card(uid) is not None:
-        msg = ut.text_card(uid)
-        kb.append(button([("🔃 Actualizar 🔃", "card_menu")]))
-    kb.append(button([("« Menú", "main_menu")]))
     resp = ut.send
     if update.callback_query is not None:
         resp = ut.edit

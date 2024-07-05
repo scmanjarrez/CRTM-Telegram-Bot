@@ -17,8 +17,6 @@ HELP_CMD = {
     "start": "Inicia el bot (obligatorio la primera vez)",
     "menu": "Menú interactivo",
     "tiempo": "Información sobre el tiempo",
-    # "abono": "Información sobre el abono transporte",
-    "guardar": "Activa/desactiva el guardado del abono en la base de datos",
     "bici": "Estadísticas de la estación de bicimad",
     "metro": "Tiempos de la estación de metro",
     "cercanias": "Tiempos de la estación de cercanías",
@@ -35,10 +33,6 @@ HELP = (
     f"Esto es lo que puedo hacer por ti:\n\n"
     f"❔ /menu - {HELP_CMD['menu']}\n\n"
     f"❔ /tiempo - {HELP_CMD['tiempo']}\n"
-    # f"❔ /abono <code>&lt;número&gt;</code> - {HELP_CMD['abono']}. "
-    # f"Elimínalo enviando -1\n"
-    f"❔ /guardar - {HELP_CMD['guardar']}. "
-    f"Desactivado por defecto\n\n"
     f"❔ /bici <code>&lt;nombre/número&gt;</code> - {HELP_CMD['bici']}\n"
     f"❔ /metro <code>&lt;nombre&gt;</code> - {HELP_CMD['metro']}\n"
     f"❔ /cercanias <code>&lt;nombre&gt;</code> - {HELP_CMD['cercanias']}\n"
@@ -62,7 +56,7 @@ HELP = (
 )
 
 
-def start(update, context):
+def start(update, _):
     uid = ut.uid(update)
     msg = HELP
     if not db.cached(uid):
@@ -71,7 +65,7 @@ def start(update, context):
     ut.send(update, msg)
 
 
-def menu(update, context):
+def menu(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -79,43 +73,12 @@ def menu(update, context):
         gui.main_menu(update)
 
 
-def weather(update, context):
+def weather(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
     else:
         gui.weather_menu(update)
-
-
-def card(update, context):
-    uid = ut.uid(update)
-    if not db.cached(uid):
-        ut.not_started(update)
-    else:
-        msg = gui.CARD
-        cardn = db.card(uid)
-        if context.args:
-            cardn = context.args[0]
-        if cardn is not None:
-            if cardn == "-1":
-                db.del_card(uid)
-                msg = "He eliminado la información sobre tu abono"
-            else:
-                msg = ut.text_card(uid, cardn)
-        ut.send(update, msg)
-
-
-def save_card(update, context):
-    uid = ut.uid(update)
-    if not db.cached(uid):
-        ut.not_started(update)
-    else:
-        if db.save_card(uid):
-            msg = "Se ha desactivado el guardado del abono en la base de datos"
-        else:
-            msg = "Se ha activado el guardado del abono en la base de datos"
-        db.toggle_card(uid)
-        ut.send(update, msg)
 
 
 def times(update, context):
@@ -167,7 +130,7 @@ def times(update, context):
         ut.send(update, msg, reply_markup=gui.markup(suggs))
 
 
-def favorites(update, context):
+def favorites(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -175,7 +138,7 @@ def favorites(update, context):
         gui.favorites_menu(update)
 
 
-def rename(update, context):
+def rename(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -183,7 +146,7 @@ def rename(update, context):
         gui.rename_menu(update)
 
 
-def bot_help(update, context):
+def bot_help(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -191,7 +154,7 @@ def bot_help(update, context):
         ut.send(update, HELP)
 
 
-def donate(update, context):
+def donate(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -202,7 +165,7 @@ def donate(update, context):
         )
 
 
-def suggest(update, context):
+def suggest(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -216,7 +179,7 @@ def suggest(update, context):
         )
 
 
-def text(update, context):
+def text(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -242,7 +205,7 @@ def text(update, context):
             del ut.STATE[uid]
 
 
-def remove(update, context):
+def remove(update, _):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
@@ -258,7 +221,7 @@ def remove(update, context):
 def inline_text(update, context, msg_id, callback_data):
     kb = []
     args = callback_data.split("_")
-    msg, stop_id = ut.text_transport(args[-2], args[-1])
+    msg, _ = ut.text_transport(args[-2], args[-1])
     gui._answer(update)
     gui.add_upd_button(kb, callback_data)
     try:
@@ -287,7 +250,7 @@ def inline_message(update, context):
     )
 
 
-def inline_query(update, context):
+def inline_query(update, _):
     query = update.inline_query.query
     if query == "":
         return
@@ -330,3 +293,17 @@ def inline_query(update, context):
     else:
         return
     update.inline_query.answer(results[:50])
+
+
+def privacy(update, _):
+    ut.send(
+        update,
+        "This bot collects and stores the <code>USER ID</code> "
+        "to function correctly. The <code>USER ID</code> is used exclusively "
+        "for storing user's favorite stations. It is not used for any other "
+        "purposes. For those interested in auditing the bot's code, the "
+        "source code is available at: "
+        "https://github.com/scmanjarrez/CRTM-Telegram-Bot. "
+        "If you do not consent to this policy, you may use the /stop command "
+        "to have your information removed from the bot's records."
+    )

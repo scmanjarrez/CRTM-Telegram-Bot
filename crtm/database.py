@@ -15,9 +15,7 @@ def setup_db():
             cur.executescript(
                 """
                 CREATE TABLE IF NOT EXISTS users (
-                    uid INTEGER PRIMARY KEY,
-                    card TEXT DEFAULT NULL,
-                    save INTEGER DEFAULT 0
+                    uid INTEGER PRIMARY KEY
                 );
 
                 CREATE TABLE IF NOT EXISTS transports (
@@ -127,49 +125,6 @@ def del_favorite(uid, transport, stop_id):
                 "DELETE FROM favorites "
                 "WHERE uid = ? AND type = ? AND stop_id = ?",
                 [uid, transport, stop_id],
-            )
-            db.commit()
-
-
-def card(uid):
-    with closing(sql.connect(ut.FILES["db"])) as db:
-        with closing(db.cursor()) as cur:
-            cur.execute("SELECT card FROM users WHERE uid = ?", [uid])
-            return cur.fetchone()[0]
-
-
-def save_card(uid):
-    with closing(sql.connect(ut.FILES["db"])) as db:
-        with closing(db.cursor()) as cur:
-            cur.execute("SELECT save FROM users WHERE uid = ?", [uid])
-            return cur.fetchone()[0]
-
-
-def toggle_card(uid):
-    with closing(sql.connect(ut.FILES["db"])) as db:
-        with closing(db.cursor()) as cur:
-            cur.execute(
-                "UPDATE users SET save = NOT save WHERE uid = ?",
-                [uid],
-            )
-            db.commit()
-
-
-def add_card(uid, cardn):
-    with closing(sql.connect(ut.FILES["db"])) as db:
-        with closing(db.cursor()) as cur:
-            cur.execute(
-                "UPDATE users SET card = ? WHERE uid = ?",
-                [cardn, uid],
-            )
-            db.commit()
-
-
-def del_card(uid):
-    with closing(sql.connect(ut.FILES["db"])) as db:
-        with closing(db.cursor()) as cur:
-            cur.execute(
-                "UPDATE users SET card = NULL WHERE uid = ?", [uid]
             )
             db.commit()
 

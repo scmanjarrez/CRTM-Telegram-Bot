@@ -36,8 +36,6 @@ def button_handler(update, context):
                 gui.main_menu(update)
             elif query.data == "weather_menu":
                 gui.weather_menu(update)
-            elif query.data == "card_menu":
-                gui.card_menu(update)
             elif query.data.startswith("train_menu"):
                 args = query.data.split("_")
                 gui.train_menu(update, args[-1])
@@ -79,7 +77,7 @@ def button_handler(update, context):
                 gui.rename_favorite(update, args[-2], args[-1])
 
 
-def setup_handlers(dispatch, job_queue):
+def setup_handlers(dispatch):
     start_handler = CommandHandler(
         "start", cli.start, filters=~Filters.update.edited_message
     )
@@ -94,18 +92,6 @@ def setup_handlers(dispatch, job_queue):
         "tiempo", cli.weather, filters=~Filters.update.edited_message
     )
     dispatch.add_handler(weather_handler)
-
-    # card_handler = CommandHandler(
-    #     "abono", cli.card, filters=~Filters.update.edited_message
-    # )
-    # dispatch.add_handler(card_handler)
-
-    save_handler = CommandHandler(
-        "guardar",
-        cli.save_card,
-        filters=~Filters.update.edited_message,
-    )
-    dispatch.add_handler(save_handler)
 
     bici_handler = CommandHandler(
         "bici", cli.times, filters=~Filters.update.edited_message
@@ -167,6 +153,19 @@ def setup_handlers(dispatch, job_queue):
         "borrar", cli.remove, filters=~Filters.update.edited_message
     )
     dispatch.add_handler(remove_handler)
+    remove2_handler = CommandHandler(
+        "stop", cli.remove, filters=~Filters.update.edited_message
+    )
+    dispatch.add_handler(remove2_handler)
+
+    privacy_handler = CommandHandler(
+        "privacidad", cli.privacy, filters=~Filters.update.edited_message
+    )
+    dispatch.add_handler(privacy_handler)
+    privacy2_handler = CommandHandler(
+        "privacy", cli.privacy, filters=~Filters.update.edited_message
+    )
+    dispatch.add_handler(privacy2_handler)
 
     text_handler = MessageHandler(
         Filters.text & ~Filters.update.edited_message, cli.text
@@ -197,7 +196,7 @@ if __name__ == "__main__":
         updater = Updater(token=ut.setting("token"), use_context=True)
         updater.bot.set_my_commands(cli.HELP_CMD.items())
         dispatcher = updater.dispatcher
-        setup_handlers(dispatcher, updater.job_queue)
+        setup_handlers(dispatcher)
 
         ut.update_data(None)
         ut.downloader_daily(updater.job_queue)
