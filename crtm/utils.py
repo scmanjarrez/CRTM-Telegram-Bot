@@ -19,7 +19,6 @@ import crtm.gui as gui
 import pytz
 import requests as req
 from bs4 import BeautifulSoup
-from dateutil import parser as ps
 from telegram import (
     InlineQueryResultArticle,
     InputTextMessageContent,
@@ -36,8 +35,7 @@ LOGO = (
 )
 RE = {
     "line": re.compile(r"(Línea) (.*):"),
-    "orig": re.compile(r"(Origen:) (.*)"),
-    "dest": re.compile(r"(Destino:) (.*)"),
+     "dest": re.compile(r"(Destino:) (.*)"),
     "time": re.compile(r"(Tiempo\(s\):) (.*)"),
 }
 CMD_TRANS = {
@@ -94,8 +92,21 @@ def setting(key):
 def api(key):
     return CONFIG["api"][key]
 
+def admin(key):
+    return CONFIG["admin"][key]
+
 
 def download_api_data():
+    # --- cercanias
+    cerc_path = Path(FILES["cerc"])
+    cerc_path.parent.mkdir(exist_ok=True)
+    get = end.download_cerc()
+    if get.status_code != 200:
+        return
+    data = parse_cerc_data(get.json())
+    with cerc_path.open("w") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+    # --- emt
     emt_path = Path(FILES["emt"])
     emt_path.parent.mkdir(exist_ok=True)
     get = end.download_emt()
@@ -104,11 +115,13 @@ def download_api_data():
     data = parse_api_data(get.json())
     with emt_path.open("w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
+    # --- interurbanos
     urb_path = Path(FILES["urb"])
     get = end.download_urb()
     if get.status_code != 200:
         return
     data = parse_api_data(get.json())
+    # --- bicimad
     with urb_path.open("w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
     bici_path = Path(FILES["bici"])
@@ -149,8 +162,21 @@ def parse_bici_data(data):
     return names
 
 
+def parse_cerc_data(data):
+    names = []
+    for station in data:
+        stop = {
+            "id": station["s"]["h"],
+            "name": station["s"]["n"],
+            "lineIds": list(set([s["n"][:2] for s in station["r"]]))
+        }
+        names.append(stop)
+    return names
+
+
 def load_data():
-    # download_api_data()
+    ## TODO: uncomment this line!!!!
+    download_api_data()
     with open(FILES["bici"], "r") as f:
         DATA["raw"]["bici"] = json.load(f)
     with open(FILES["cerc"], "r") as f:
@@ -194,40 +220,32 @@ def metro_ids():
     stations = {}
     for st in DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]:
         name = st["name"]
+        web = st["idweb"]
         if name not in stations:
-            stations[name] = {"idweb": set(), "cnt": 0}
-        stations[name]["cnt"] += 1
+            stations[name] = {"idweb": set(), "idmatriz": set()}
         if "idMatriz" in st:
-            if "idmatrix" not in stations[name]:
-                stations[name]["idmatrix"] = set()
-            stations[name]["idmatrix"].add(st["idMatriz"])
-        stations[name]["idweb"].add(st["idweb"])
-        if "idOcupacion" in st:
-            if "idocup" not in stations[name]:
-                stations[name]["idocup"] = []
-            stations[name]["idocup"].append(st["idOcupacion"])
+            stations[name]["idmatriz"].add(st["idMatriz"])
+        stations[name]["idweb"].add(web)
     staids = {}
+    staall = {}
     for k, v in stations.items():
         staid = list(v["idweb"])[0]
-        if v["cnt"] > 1:
-            if "idmatrix" in v:
-                staid = list(v["idmatrix"])[0]
-        else:
-            if "idocup" in v:
-                staid = v["idocup"][0]
+        if len(v["idmatriz"]) > 0:
+            staall[staid] = list(v["idmatriz"])[0]
         staids[k] = staid
-    return staids
+    return staids, staall
 
 
 def metro_lines():
-    staids = metro_ids()
+    staids, staall = metro_ids()
+    DATA["proc"]["metro"]["idsmat"] = staall
     for idx, info in enumerate(
         DATA["raw"]["metro"]["red"]["estaciones"]["estacion"]
     ):
         staid = staids[info["name"]]
         DATA["proc"]["metro"]["index"][staid] = idx
         DATA["proc"]["metro"]["names"].append(info["name"])
-        DATA["proc"]["metro"]["ids"].append(staid)
+        DATA["proc"]["metro"]["ids"].append(staids[info["name"]])
         first = info["name"][0]
         if first not in DATA["proc"]["metro"]["stops"]:
             DATA["proc"]["metro"]["stops"][first] = []
@@ -372,34 +390,21 @@ def cercanias(stop_id):
     except req.exceptions.ReadTimeout:
         return None
     else:
-        soup = BeautifulSoup(get.text, "html.parser")
-        data = [
-            [
-                [el.text.strip() for el in row.select("td")]
-                for row in plan.select(
-                    "tr.recent-even, tr.recent-odd"
-                )
-            ]
-            for plan in soup.select("table#plan-table")
-        ]
+        if get.text in (
+            "Rate exceeded.",
+            "Error: could not handle the request\n",
+        ):
+            return None
+        data = get.json()
+        if "code" in data:
+            return None
         info = {}
-        for idy, times in enumerate(data):
-            if times:
-                if DATA["idx"]["cerc"][idy] not in info:
-                    info[DATA["idx"]["cerc"][idy]] = {}
-                for tm in times:
-                    if tm[1] not in info[DATA["idx"]["cerc"][idy]]:
-                        info[DATA["idx"]["cerc"][idy]][tm[1]] = [
-                            "",
-                            [],
-                        ]
-                    info[DATA["idx"]["cerc"][idy]][tm[1]][0] = tm[3]
-                    info[DATA["idx"]["cerc"][idy]][tm[1]][1].append(
-                        (
-                            tm[0] if tm[0] else "Llegando",
-                            f"Vía {tm[4]}" if tm[4] else "",
-                        )
-                    )
+        for train in data["stopRoutesSimpleRealTimesList"]:
+            if train["hi"] not in info:
+                info[train["hi"]] = {}
+            if train["h"] not in info[train["hi"]]:
+                info[train["hi"]][train["h"]] = []
+            info[train["hi"]][train["h"]].append((train["p"], train["s"]))
         return info
 
 
@@ -421,20 +426,36 @@ def metro(stop_id):
                 info[line.text][platform] = {
                     "direction": train.find("sentido").text
                 }
+                prev = datetime.fromisoformat(
+                    train.find("fechaHoraEmisionPrevision").text)
+                now = datetime.now(prev.tzinfo)
+                minutes_passed = (now - prev).seconds // 60
                 next1 = train.find("proximo")
                 next2 = train.find("siguiente")
                 times = []
                 if next1 is not None and next1.text:
-                    times.append(next1.text)
+                    if next1.text == "0":
+                        if minutes_passed < 1:
+                            times.append("Llegando")
+                        else:
+                            times.append("A la espera de previsión")
+                    else:
+                        times.append(f"{next1.text}min")
                 if next2 is not None and next2.text:
-                    times.append(next2.text)
+                    if next2.text == "0":
+                        if minutes_passed < 1:
+                            times.append("Llegando")
+                        else:
+                            times.append("A la espera de previsión")
+                    else:
+                        times.append(f"{next2.text}min")
                 if not times:
                     times.append("No disponible")
                 info[line.text][platform]["times"] = times
         return info
 
 
-def real_time(transport, stop_id):
+def bus(transport, stop_id):
     try:
         get = end.get_bus(transport, stop_id)
     except req.exceptions.ReadTimeout:
@@ -450,24 +471,20 @@ def real_time(transport, stop_id):
             return None
         info = {}
         for bs in data["rtl"]:
-            sec = [
-                str(binfo["s"] // 60)
-                if binfo["s"] > 60
-                else "Llegando"
-                for binfo in bs["l"]
-            ]
+            times = []
+            for binfo in bs["l"]:
+                time = "Llegando"
+                if binfo["s"] > 60:
+                    if binfo["s"] > 3600:
+                        time = (f"{binfo['s'] // 3600}:"
+                                f"{(binfo['s'] % 3600) // 60:02}h")
+                    else:
+                        time = f"{binfo['s'] // 60}min"
+                times.append(time)
             bid = DATA["raw"][transport]["line"][bs["r"]]["id"]
-            if transport == "metro":
-                if bid not in info:
-                    info[bid] = []
-                tmp = {}
-                tmp["name"] = bs["h"]
-                tmp["times"] = sec
-                info[bid].append(tmp)
-            else:
-                info[bid] = {}
-                info[bid]["name"] = bs["h"]
-                info[bid]["times"] = sec
+            info[bid] = {}
+            info[bid]["name"] = bs["h"]
+            info[bid]["times"] = times
         return info
 
 
@@ -503,15 +520,6 @@ def reformat(text):
     return text
 
 
-def reformat_cercanias(text):
-    text = text.replace("Llegadas", "<b>Llegadas</b>")
-    text = text.replace("Salidas", "<b>Salidas</b>")
-    text = RE["orig"].sub(r"\1 <code>\2</code>", text)
-    text = RE["dest"].sub(r"\1 <code>\2</code>", text)
-    text = RE["time"].sub(r"\1 <code>\2</code>", text)
-    return text
-
-
 def text_weather():
     data = weather()
     msg = [
@@ -540,7 +548,7 @@ def text_weather():
 
 
 def text_bici(stop, stop_id):
-    msg = [f"Estadísticas de estación {stop}\n\n"]
+    msg = [f"Estadísticas de estación <b>{stop}</b>\n\n"]
     data = bici(stop_id)
     if data is not None:
         if data and data["data"]:
@@ -579,21 +587,20 @@ def text_bici(stop, stop_id):
 
 
 def text_metro(stop, stop_id):
-    msg = [f"Tiempos en estación {stop}\n\n"]
+    msg = [f"Tiempos en estación <b>{stop}</b>\n\n"]
     data = metro(stop_id)
     if data is not None:
         if data:
-            for line in data:
+            for line in sorted(data, key=sort_line):
                 msg.append(f"<b>Línea {line}:</b>\n")
                 for platf, info in data[line].items():
                     msg.append(
-                        f"- Destino: <code>{info['direction']}</code>\n"
+                        f"- Destino: <code>{info['direction']} "
+                        f"(Andén {platf})</code>\n"
                     )
-                    msg.append(f"- Andén: <code>{platf}</code>\n")
                     msg.append(
                         f"- Tiempo(s): "
-                        f"<code>{', '.join(info['times'])}"
-                        f"</code>"
+                        f"<code>{', '.join(info['times'])}</code>"
                         f"\n\n"
                     )
         else:
@@ -607,29 +614,27 @@ def text_metro(stop, stop_id):
 
 
 def text_cercanias(stop, stop_id):
-    msg = [f"Tiempos en estación {stop}\n\n"]
+    msg = [f"Tiempos en estación <b>{stop}</b>\n\n"]
     data = cercanias(stop_id)
     if data is not None:
         if data:
-            for dtype in data:
-                msg.append(f"<b>{dtype.capitalize()}:</b>\n")
-                for direc in data[dtype]:
-                    line = "{}".format(
-                        f" ({data[dtype][direc][0]})"
-                        if data[dtype][direc][0]
-                        else ""
-                    )
-                    times = [
-                        "{}{}".format(
-                            tm[0], f" ({tm[1]})" if tm[1] else ""
-                        )
-                        for tm in data[dtype][direc][1]
-                    ]
+            for line in sorted(data, key=sort_line):
+                msg.append(f"<b>Línea {line}:</b>\n")
+                for direction, info in data[line].items():
                     msg.append(
-                        f"- {'Origen' if dtype == 'llegadas' else 'Destino'}: "
-                        f"<code>{direc}{line}</code>"
-                        f"\n"
+                        f"- Destino: <code>{direction} "
+                        f"(Vía {info[0][0]})</code>\n"
                     )
+                    times = []
+                    for train in info:
+                        time = "Llegando"
+                        if train[1] > 60:
+                            if train[1] > 3600:
+                                time = (f"{train[1] // 3600}:"
+                                        f"{(train[1] % 3600) // 60:02}h")
+                            else:
+                                time = f"{train[1] // 60}min"
+                        times.append(time)
                     msg.append(
                         f"- Tiempo(s): "
                         f"<code>{', '.join(times)}</code>"
@@ -647,20 +652,20 @@ def text_cercanias(stop, stop_id):
 
 def text_bus(transport, stop, stop_id):
     msg = [
-        f"Tiempos en parada {stop} ({stop_id.replace(PREFIX[transport], '')})\n\n"
+        f"Tiempos en parada <b>{stop} "
+        f"({stop_id.replace(PREFIX[transport], '')})</b>\n\n"
     ]
-    data = real_time(transport, stop_id)
+    data = bus(transport, stop_id)
     if data is not None:
         if data:
-            for line in data:
+            for line in sorted(data, key=sort_line):
                 msg.append(f"<b>Línea {line}:</b>\n")
                 msg.append(
                     f"- Destino: <code>{data[line]['name']}</code>\n"
                 )
                 msg.append(
                     f"- Tiempo(s): "
-                    f"<code>{', '.join(data[line]['times'])}"
-                    f"</code>"
+                    f"<code>{', '.join(data[line]['times'])}</code>"
                     f"\n\n"
                 )
         else:
@@ -679,8 +684,11 @@ def index(transport, stop_id):
     return DATA["proc"][transport]["index"][stop_id]
 
 
-def store_suggestion(text):
-    with open("suggestions.txt", "a") as f:
+def store_message(text, rep=False):
+    file = "suggestions.txt"
+    if rep:
+        file = "reports.txt"
+    with open(file, "a") as f:
         f.write(f"{text}\n\n")
 
 
@@ -756,11 +764,15 @@ def text_transport(transport, index):
 
 
 def result(transport, rid, msg):
+    _msg = msg.split()
+    pref = _msg[:3]
+    sta = _msg[3:]
     return InlineQueryResultArticle(
         id=rid,
         title=msg.capitalize(),
         input_message_content=InputTextMessageContent(
-            f"Recopilando {msg}"
+            f"Recopilando {' '.join(pref)} <b>{' '.join(sta)}</b>",
+            parse_mode=ParseMode.HTML
         ),
         reply_markup=gui.markup([("🔃 Actualizar 🔃", rid)]),
         thumb_url=f"{LOGO}/{transport}.png",
@@ -802,6 +814,7 @@ def update_data(_):
                 "index": {},
                 "names": [],
                 "ids": [],
+                "idsmat": {},
             },
             "cerc": {
                 "lines": {},
@@ -831,3 +844,10 @@ def downloader_daily(queue):
         context=queue,
         name="downloader_daily",
     )
+
+
+def sort_line(s):
+    numeric = ''.join(filter(str.isdigit, s))
+    alpha = ''.join(filter(str.isalpha, s))
+    num = int(numeric) if numeric else 0
+    return (num, alpha)

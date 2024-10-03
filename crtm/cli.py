@@ -26,6 +26,7 @@ HELP_CMD = {
     "renombrar": "Renombrar un favorito",
     "ayuda": "Lista de comandos",
     "sugerir": "Enviar una sugerencia",
+    "informar": "Informar sobre un problema",
     "donar": "Hacer un donativo (ko-fi)",
     "borrar": "Elimina toda la información sobre ti",
 }
@@ -46,6 +47,7 @@ HELP = (
     f"❔ /start - {HELP_CMD['start']}\n"
     f"❔ /ayuda - {HELP_CMD['ayuda']}\n"
     f"❔ /sugerir - {HELP_CMD['sugerir']}\n"
+    f"❔ /informar - {HELP_CMD['informar']}\n"
     f"❔ /donar - {HELP_CMD['donar']}\n"
     f"❔ /borrar - {HELP_CMD['borrar']}\n"
     f"❕ <b>Nota:</b> También puedes usarme en modo inline de esta forma: "
@@ -178,19 +180,37 @@ def suggest(update, _):
             "por implementarlo.",
         )
 
+def report(update, _):
+    uid = ut.uid(update)
+    if not db.cached(uid):
+        ut.not_started(update)
+    else:
+        if uid not in ut.STATE:
+            ut.STATE[uid] = ("report",)
+        ut.send(
+            update,
+            "Por favor, indícame el problema y los pasos para reproducirlo.",
+        )
 
-def text(update, _):
+
+def text(update, context):
     uid = ut.uid(update)
     if not db.cached(uid):
         ut.not_started(update)
     else:
         if uid in ut.STATE:
-            if ut.STATE[uid][0] == "suggest":
-                ut.store_suggestion(update.message.text)
-                ut.send(
-                    update,
-                    "He tomado nota de la sugerencia. Gracias.",
-                )
+            if ut.STATE[uid][0] in ["suggest", "report"]:
+                word = "de la sugerencia"
+                word2 = "Suggestion"
+                if ut.STATE[uid][0] == "report":
+                    word = "del informe"
+                    word2 = "Report"
+                msg = f"He tomado nota {word}. Gracias."
+                ut.send_bot(context.bot, ut.admin("id"),
+                            f"{word2}: {update.message.text}")
+                ut.store_message(update.message.text,
+                                 rep=ut.STATE[uid][0] == "report")
+                ut.send(update, msg)
             else:
                 transport, index = ut.STATE[uid][1]
                 stop, stop_id = ut.transport_info(transport, index)

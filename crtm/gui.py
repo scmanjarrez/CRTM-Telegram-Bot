@@ -252,9 +252,9 @@ def bus_menu(update, transport):
     msg = "Envía el nombre o número de la parada al comando"
     if transport == "bici":
         msg = (
-            f"Envía el nombre o número de la parada al comando /bici.\n\n"
-            f"<b>Ejemplos</b>:\n- /bici <code>casal</code>\n"
-            f"- /bici <code>77</code>"
+            "Envía el nombre o número de la parada al comando /bici.\n\n"
+            "<b>Ejemplos</b>:\n- /bici <code>casal</code>\n"
+            "- /bici <code>77</code>"
         )
     elif transport == "emt":
         msg = (
@@ -332,12 +332,7 @@ def add_favorite(update, uid, transport, index):
     stop, stop_id = ut.transport_info(transport, index)
     db.add_favorite(uid, transport, stop_id, stop)
     message = update.callback_query.message
-    if transport == "metro":
-        text = ut.reformat(message.text)
-    elif transport == "cerc":
-        text = ut.reformat_cercanias(message.text)
-    else:
-        text = ut.reformat(message.text)
+    text = ut.reformat(message.text)
     ut.edit(
         update,
         text,

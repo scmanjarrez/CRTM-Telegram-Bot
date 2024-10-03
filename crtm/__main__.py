@@ -144,6 +144,11 @@ def setup_handlers(dispatch):
     )
     dispatch.add_handler(suggest_handler)
 
+    report_handler = CommandHandler(
+        "informar", cli.report, filters=~Filters.update.edited_message
+    )
+    dispatch.add_handler(report_handler)
+
     donate_handler = CommandHandler(
         "donar", cli.donate, filters=~Filters.update.edited_message
     )
