@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 
-# Copyright (c) 2022-2024 scmanjarrez. All rights reserved.
+# Copyright (c) 2022-2025 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
 
 import json
