@@ -6,10 +6,6 @@
 import logging
 import os
 
-import crtm.cli as cli
-import crtm.database as db
-import crtm.gui as gui
-import crtm.utils as ut
 from telegram.ext import (
     CallbackQueryHandler,
     ChosenInlineResultHandler,
@@ -20,13 +16,16 @@ from telegram.ext import (
     Updater,
 )
 
+import crtm.cli as cli
+import crtm.database as db
+import crtm.gui as gui
+import crtm.utils as ut
+
 
 def button_handler(update, context):
     query = update.callback_query
     if query.inline_message_id is not None:
-        cli.inline_text(
-            update, context, query.inline_message_id, query.data
-        )
+        cli.inline_text(update, context, query.inline_message_id, query.data)
     else:
         uid = ut.uid(update)
         if not db.cached(uid):
@@ -44,14 +43,10 @@ def button_handler(update, context):
                 gui.train_line_menu(update, args[-2], args[-1])
             elif query.data.startswith("station_menu"):
                 args = query.data.split("_")
-                gui.train_station_menu(
-                    update, args[-3], args[-2], args[-1]
-                )
+                gui.train_station_menu(update, args[-3], args[-2], args[-1])
             elif query.data.startswith("time_train"):
                 args = query.data.split("_")
-                gui.train_time(
-                    update, args[-4], args[-3], args[-2], args[-1]
-                )
+                gui.train_time(update, args[-4], args[-3], args[-2], args[-1])
             elif query.data.startswith("bus_menu"):
                 args = query.data.split("_")
                 gui.bus_menu(update, args[-1])
@@ -181,16 +176,12 @@ def setup_handlers(dispatch):
 
     dispatcher.add_handler(InlineQueryHandler(cli.inline_query))
 
-    dispatcher.add_handler(
-        ChosenInlineResultHandler(cli.inline_message)
-    )
+    dispatcher.add_handler(ChosenInlineResultHandler(cli.inline_message))
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        format=(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        ),
+        format=("%(asctime)s - %(name)s - %(levelname)s - %(message)s"),
         level=logging.INFO,
     )
 
@@ -214,9 +205,7 @@ if __name__ == "__main__":
                     url_path=ut.setting("token"),
                     cert=ut.setting("cert"),
                     webhook_url=(
-                        f"https://"
-                        f"{ut.setting('ip')}/"
-                        f"{ut.setting('token')}"
+                        f"https://{ut.setting('ip')}/{ut.setting('token')}"
                     ),
                 )
             else:

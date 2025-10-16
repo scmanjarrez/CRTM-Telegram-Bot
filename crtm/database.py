@@ -40,11 +40,7 @@ def cached(uid):
     with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
-                "SELECT EXISTS ("
-                "SELECT 1 "
-                "FROM users "
-                "WHERE uid = ?"
-                ")",
+                "SELECT EXISTS (SELECT 1 FROM users WHERE uid = ?)",
                 [uid],
             )
             return cur.fetchone()[0]
@@ -68,9 +64,7 @@ def favorites(uid):
     with closing(sql.connect(ut.FILES["db"])) as db:
         with closing(db.cursor()) as cur:
             cur.execute(
-                "SELECT type, stop_id, stop "
-                "FROM favorites "
-                "WHERE uid = ?",
+                "SELECT type, stop_id, stop FROM favorites WHERE uid = ?",
                 [uid],
             )
             return cur.fetchall()

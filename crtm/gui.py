@@ -5,10 +5,11 @@
 # Copyright (c) 2022-2025 scmanjarrez. All rights reserved.
 # This work is licensed under the terms of the MIT license.
 
-import crtm.database as db
-import crtm.utils as ut
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.error import BadRequest
+
+import crtm.database as db
+import crtm.utils as ut
 
 
 def _answer(update, msg=None):
@@ -20,10 +21,7 @@ def _answer(update, msg=None):
 
 
 def button(buttons):
-    return [
-        InlineKeyboardButton(bt[0], callback_data=bt[1])
-        for bt in buttons
-    ]
+    return [InlineKeyboardButton(bt[0], callback_data=bt[1]) for bt in buttons]
 
 
 def button_url(buttons):
@@ -34,11 +32,7 @@ def markup(buttons):
     if buttons:
         return InlineKeyboardMarkup(
             [
-                [
-                    InlineKeyboardButton(
-                        stop, callback_data=callback_data
-                    )
-                ]
+                [InlineKeyboardButton(stop, callback_data=callback_data)]
                 for stop, callback_data in buttons
             ]
         )
@@ -97,12 +91,7 @@ def train_menu(update, transport):
         sort_fn = ut.sort_cerc_lines
     for lines in list(ut.chunk(sorted(keys, key=sort_fn))):
         kb.append(
-            button(
-                [
-                    (line, f"line_menu_{transport}_{line}")
-                    for line in lines
-                ]
-            )
+            button([(line, f"line_menu_{transport}_{line}") for line in lines])
         )
     kb.append(button([("A-Z", f"line_menu_{transport}_A-Z")]))
     kb.append(button([("« Menú", "main_menu")]))
@@ -123,9 +112,7 @@ def train_menu(update, transport):
 def train_line_menu(update, transport, line):
     _answer(update)
     if line == "A-Z":
-        keys = sorted(
-            list(ut.DATA["proc"][transport]["stops"].keys())
-        )
+        keys = sorted(list(ut.DATA["proc"][transport]["stops"].keys()))
     else:
         keys = list(ut.DATA["proc"][transport]["lines"][line].keys())
     kb = []
@@ -173,9 +160,7 @@ def train_station_menu(update, transport, line, letter):
         stop, _ = ut.transport_info(transport, idx)
         stations[stop] = idx
     kb = [
-        button(
-            [(stop, f"time_train_{transport}_{line}_{letter}_{idx}")]
-        )
+        button([(stop, f"time_train_{transport}_{line}_{letter}_{idx}")])
         for stop, idx in sorted(stations.items())
     ]
     kb.append(
@@ -202,9 +187,7 @@ def train_time(update, transport, line, letter, index):
     kb = []
     msg, stop_id = ut.text_transport(transport, index)
     _answer(update)
-    add_upd_button(
-        kb, f"time_train_{transport}_{line}_{letter}_{index}"
-    )
+    add_upd_button(kb, f"time_train_{transport}_{line}_{letter}_{index}")
     kb.append(
         button(
             [

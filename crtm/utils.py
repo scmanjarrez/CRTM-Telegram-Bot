@@ -13,11 +13,8 @@ import unicodedata
 from datetime import datetime, time
 from pathlib import Path
 
-import crtm.database as db
-import crtm.private.endpoints as end  # not uploaded for privacy reasons
-import crtm.gui as gui
-import pytz
-import requests as req
+import pytz  # type: ignore
+import requests as req  # type: ignore
 from bs4 import BeautifulSoup
 from telegram import (
     InlineQueryResultArticle,
@@ -26,6 +23,9 @@ from telegram import (
 )
 from telegram.error import BadRequest, Unauthorized
 
+import crtm.database as db
+import crtm.gui as gui
+import crtm.private.endpoints as end  # not uploaded for privacy reasons
 
 STATE = {}
 KB_WIDTH = 4
@@ -35,7 +35,7 @@ LOGO = (
 )
 RE = {
     "line": re.compile(r"(Línea) (.*):"),
-     "dest": re.compile(r"(Destino:) (.*)"),
+    "dest": re.compile(r"(Destino:) (.*)"),
     "time": re.compile(r"(Tiempo\(s\):) (.*)"),
 }
 CMD_TRANS = {
@@ -92,6 +92,7 @@ def setting(key):
 def api(key):
     return CONFIG["api"][key]
 
+
 def admin(key):
     return CONFIG["admin"][key]
 
@@ -146,9 +147,9 @@ def parse_api_data(data, fill=None):
             if sts["i"] not in names["station"]:
                 names["station"][sts["i"]] = {}
                 names["station"][sts["i"]]["name"] = sts["n"]
-                names["station"][sts["i"]]["lineIds"] = data[
-                    "uiStopIndexes"
-                ][sts["i"]]
+                names["station"][sts["i"]]["lineIds"] = data["uiStopIndexes"][
+                    sts["i"]
+                ]
     return names
 
 
@@ -168,7 +169,7 @@ def parse_cerc_data(data):
         stop = {
             "id": station["s"]["h"],
             "name": station["s"]["n"],
-            "lineIds": list(set([s["n"][:2] for s in station["r"]]))
+            "lineIds": list(set([s["n"][:2] for s in station["r"]])),
         }
         names.append(stop)
     return names
@@ -190,9 +191,7 @@ def load_data():
 
 
 def bici_lines():
-    for idx, (station, info) in enumerate(
-        DATA["raw"]["bici"].items()
-    ):
+    for idx, (station, info) in enumerate(DATA["raw"]["bici"].items()):
         DATA["proc"]["bici"]["index"][station] = idx
         DATA["proc"]["bici"]["names"].append(info["name"])
         DATA["proc"]["bici"]["ids"].append(station)
@@ -275,9 +274,7 @@ def blocked(uid):
     db.del_user(uid)
 
 
-def send(
-    update, msg, quote=True, reply_markup=None, disable_preview=True
-):
+def send(update, msg, quote=True, reply_markup=None, disable_preview=True):
     try:
         return update.message.reply_html(
             msg,
@@ -325,34 +322,39 @@ def not_started(update):
 
 
 def not_started_gui(update):
-    edit(update, "Es necesario iniciar el bot con /start antes de continuar.", None)
+    edit(
+        update,
+        "Es necesario iniciar el bot con /start antes de continuar.",
+        None,
+    )
 
 
 def weather_info(data):
     res = {
         "summ": data["summary"],
         "hum": f"{round(data['humidity'])}",
-        "rain": ("0" if data["precipProbability"] is None
-                 else round(data['precipProbability']*100)),
+        "rain": (
+            "0"
+            if data["precipProbability"] is None
+            else round(data["precipProbability"] * 100)
+        ),
     }
     if "temperature" in data:
         res["temp"] = f"{data['temperature']:.1f}"
         if "unixTime" in data:
-            res["hour"] = datetime.fromtimestamp(
-                data["unixTime"]
-            ).strftime("%H:%M")
+            res["hour"] = datetime.fromtimestamp(data["unixTime"]).strftime(
+                "%H:%M"
+            )
     else:
         res["tempmin"] = f"{data['tempMin']:.1f}"
         res["tempmax"] = f"{data['tempMax']:.1f}"
-        res["day"] = datetime.fromtimestamp(
-            data["unixTime"]
-        ).strftime("%d/%m")
+        res["day"] = datetime.fromtimestamp(data["unixTime"]).strftime("%d/%m")
     return res
 
 
 def weather():
     get = req.get(
-        f'{end.URL["weather"]}',
+        f"{end.URL['weather']}",
         params={
             "lat": 40.49,
             "lng": -3.68,
@@ -364,13 +366,8 @@ def weather():
     data = get.json()
     info = {
         "now": weather_info(data["nowData"]),
-        "hours": [
-            weather_info(hour)
-            for hour in data["nextHoursData"]["list"]
-        ],
-        "days": [
-            weather_info(day) for day in data["nextDaysData"]["list"]
-        ],
+        "hours": [weather_info(hour) for hour in data["nextHoursData"]["list"]],
+        "days": [weather_info(day) for day in data["nextDaysData"]["list"]],
     }
     return info
 
@@ -427,7 +424,8 @@ def metro(stop_id):
                     "direction": train.find("sentido").text
                 }
                 prev = datetime.fromisoformat(
-                    train.find("fechaHoraEmisionPrevision").text)
+                    train.find("fechaHoraEmisionPrevision").text
+                )
                 now = datetime.now(prev.tzinfo)
                 minutes_passed = (now - prev).seconds // 60
                 next1 = train.find("proximo")
@@ -476,8 +474,10 @@ def bus(transport, stop_id):
                 time = "Llegando"
                 if binfo["s"] > 60:
                     if binfo["s"] > 3600:
-                        time = (f"{binfo['s'] // 3600}:"
-                                f"{(binfo['s'] % 3600) // 60:02}h")
+                        time = (
+                            f"{binfo['s'] // 3600}:"
+                            f"{(binfo['s'] % 3600) // 60:02}h"
+                        )
                     else:
                         time = f"{binfo['s'] // 60}min"
                 times.append(time)
@@ -527,8 +527,7 @@ def text_weather():
         f"- Resumen: <code>{data['now']['summ']}</code>\n",
         f"- Temperatura: <code>{data['now']['temp']}ºC</code>\n",
         f"- Humedad: <code>{data['now']['hum']}%</code>\n",
-        f"- Probabilidad de lluvia: <code>{data['now']['rain']}%"
-        f"</code>\n",
+        f"- Probabilidad de lluvia: <code>{data['now']['rain']}%</code>\n",
     ]
     msg.append("\n<b>Clima en las próximas horas</b>\n")
     for hour in data["hours"][0:9]:
@@ -565,8 +564,7 @@ def text_bici(stop, stop_id):
             )
             total = info["total_bases"]
             msg.append(
-                f"- <b>Bicis</b>: <code>{info['dock_bikes']}/{total}"
-                f"</code>\n"
+                f"- <b>Bicis</b>: <code>{info['dock_bikes']}/{total}</code>\n"
             )
             msg.append(
                 f"- <b>Anclajes</b>: <code>{info['free_bases']}/{total}"
@@ -630,15 +628,15 @@ def text_cercanias(stop, stop_id):
                         time = "Llegando"
                         if train[1] > 60:
                             if train[1] > 3600:
-                                time = (f"{train[1] // 3600}:"
-                                        f"{(train[1] % 3600) // 60:02}h")
+                                time = (
+                                    f"{train[1] // 3600}:"
+                                    f"{(train[1] % 3600) // 60:02}h"
+                                )
                             else:
                                 time = f"{train[1] // 60}min"
                         times.append(time)
                     msg.append(
-                        f"- Tiempo(s): "
-                        f"<code>{', '.join(times)}</code>"
-                        f"\n\n"
+                        f"- Tiempo(s): <code>{', '.join(times)}</code>\n\n"
                     )
         else:
             msg.append("<b>No hay tiempos disponibles.</b>")
@@ -660,9 +658,7 @@ def text_bus(transport, stop, stop_id):
         if data:
             for line in sorted(data, key=sort_line):
                 msg.append(f"<b>Línea {line}:</b>\n")
-                msg.append(
-                    f"- Destino: <code>{data[line]['name']}</code>\n"
-                )
+                msg.append(f"- Destino: <code>{data[line]['name']}</code>\n")
                 msg.append(
                     f"- Tiempo(s): "
                     f"<code>{', '.join(data[line]['times'])}</code>"
@@ -694,9 +690,7 @@ def store_message(text, rep=False):
 
 def normalize(word):
     nfkd = unicodedata.normalize("NFKD", word)
-    return "".join(
-        [c for c in nfkd if not unicodedata.combining(c)]
-    ).upper()
+    return "".join([c for c in nfkd if not unicodedata.combining(c)]).upper()
 
 
 def is_int(text):
@@ -728,13 +722,10 @@ def stopname_matches(transport, stopnames, inline=False):
     if transport == "metro":
         uniq = {stop: idx for idx, stop in stops}
         return [
-            stop_data(transport, index, inline)
-            for _, index in uniq.items()
+            stop_data(transport, index, inline) for _, index in uniq.items()
         ]
     else:
-        return [
-            stop_data(transport, index, inline) for index, _ in stops
-        ]
+        return [stop_data(transport, index, inline) for index, _ in stops]
 
 
 def stopnumber_match(transport, stopnumber):
@@ -772,7 +763,7 @@ def result(transport, rid, msg):
         title=msg.capitalize(),
         input_message_content=InputTextMessageContent(
             f"Recopilando {' '.join(pref)} <b>{' '.join(sta)}</b>",
-            parse_mode=ParseMode.HTML
+            parse_mode=ParseMode.HTML,
         ),
         reply_markup=gui.markup([("🔃 Actualizar 🔃", rid)]),
         thumb_url=f"{LOGO}/{transport}.png",
@@ -847,7 +838,7 @@ def downloader_daily(queue):
 
 
 def sort_line(s):
-    numeric = ''.join(filter(str.isdigit, s))
-    alpha = ''.join(filter(str.isalpha, s))
+    numeric = "".join(filter(str.isdigit, s))
+    alpha = "".join(filter(str.isalpha, s))
     num = int(numeric) if numeric else 0
     return (num, alpha)
