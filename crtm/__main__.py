@@ -202,10 +202,8 @@ if __name__ == "__main__":
                 updater.start_webhook(
                     listen=ut.setting("listen"),
                     port=ut.setting("port"),
-                    url_path=ut.setting("token"),
-                    cert=ut.setting("cert"),
                     webhook_url=(
-                        f"https://{ut.setting('ip')}/{ut.setting('token')}"
+                        f"https://{ut.setting('ip')}"
                     ),
                 )
             else:
