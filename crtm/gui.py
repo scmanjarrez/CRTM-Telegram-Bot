@@ -375,17 +375,21 @@ def rename_menu(update):
     if favorites:
         msg = "Indícame la estación/parada que quieras renombrar"
         for transport, stop_id, stop in favorites:
-            index = ut.index(transport, stop_id)
-            kb.append(
-                button(
-                    [
-                        (
-                            f"{transport}: {stop}",
-                            f"rename_fav_{transport}_{index}",
-                        )
-                    ]
+            try:
+                index = ut.index(transport, stop_id)
+            except KeyError:
+                continue
+            else:
+                kb.append(
+                    button(
+                        [
+                            (
+                                f"{transport}: {stop}",
+                                f"rename_fav_{transport}_{index}",
+                            )
+                        ]
+                    )
                 )
-            )
     kb.append(button([("« Menú", "main_menu")]))
     resp = ut.send
     if update.callback_query is not None:
